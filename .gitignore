@@ -2,3 +2,5 @@
 __pycache__
 ignored_dir
 main_notebook.ipynb
+dataset
+dataset/*
