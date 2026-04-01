@@ -1,4 +1,6 @@
 .ipynb_checkpoints
+.venv/
+.venv-1/
 __pycache__
 ignored_dir
 main_notebook.ipynb

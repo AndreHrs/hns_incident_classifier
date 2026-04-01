@@ -1,56 +1,46 @@
-# %%
 import sys
 import os
 import pandas as pd
 
-sys.path.insert(0, os.path.abspath("../.."))
+sys.path.insert(0, os.path.abspath("."))
 
 from modules.pre_processing.numeric_handler import handle_numeric
-from modules.tokenization import handle_tokenization
+from modules.tokenization import handle_tokenization, normalize_tokens
 
-def process_datasets(datasets, keep_numbers=True, keep_decimals_together=True, split_num_units=False):
-    for df in datasets:
-      clean_col = "events_clean"
-      token_col = "events_tokens"
+df = pd.read_csv("dataset/final_dataset.csv")
 
-      df[clean_col] = df["events"].apply(lambda s: handle_numeric(s, keep_numbers=keep_numbers))
-      df[token_col] = df[clean_col].apply(
-          lambda s: handle_tokenization(s, keep_decimals_together, split_num_units)
-      )
+text_col = "Detailed Description of Event"
 
-    return datasets
+def test_preprocessing(df, keep_numbers, n=5):
+    temp = df.copy()
 
+    temp["description_clean"] = temp[text_col].astype(str).apply(
+        lambda s: handle_numeric(s, keep_numbers=keep_numbers)
+    )
 
-sample_dataset = pd.DataFrame({
-    "events": ["the object is 10cm long", "he run 5.3km in 20.5 minutes", "water boils at 100°c", "visit us at https://example.com", "price dropped by 100% unbelieveable"]
-})
+    temp["description_tokens_raw"] = temp["description_clean"].apply(
+        lambda s: handle_tokenization(s)
+    )
 
+    temp["description_tokens"] = temp["description_tokens_raw"].apply(
+        lambda toks: normalize_tokens(toks, keep_numbers=keep_numbers)
+    )
 
-print("\n=== CASE 1: keep_numbers=True, keep_decimals_together=True, split_num_units=True ===")
-process_datasets([sample_dataset], keep_numbers=True, keep_decimals_together=True, split_num_units=True)
-print(sample_dataset)
+    print("\n" + "=" * 80)
+    print(f"keep_numbers={keep_numbers}")
+    print("=" * 80)
 
-print("\n=== CASE 2: keep_numbers=True, keep_decimals_together=True, split_num_units=False ===")
-process_datasets([sample_dataset], keep_numbers=True, keep_decimals_together=True, split_num_units=False)
-print(sample_dataset)
+    for i, row in temp[[text_col, "description_clean", "description_tokens_raw", "description_tokens"]].head(n).iterrows():
+        print(f"\nROW {i}")
+        print("ORIGINAL:")
+        print(row[text_col])
+        print("\nCLEANED:")
+        print(row["description_clean"])
+        print("\nRAW TOKENS:")
+        print(row["description_tokens_raw"])
+        print("\nNORMALIZED TOKENS:")
+        print(row["description_tokens"])
+        print("-" * 80)
 
-print("\n=== CASE 3: keep_numbers=False, keep_decimals_together=False, split_num_units=True ===")
-process_datasets([sample_dataset], keep_numbers=False, keep_decimals_together=False, split_num_units=True)
-print(sample_dataset)
-
-print("\n=== CASE 4: keep_numbers=False, keep_decimals_together=False, split_num_units=False ===")
-process_datasets([sample_dataset], keep_numbers=False, keep_decimals_together=False, split_num_units=False)
-print(sample_dataset)
-
-print("\n=== CASE 5: keep_numbers=True, keep_decimals_together=False, split_num_units=True ===")
-process_datasets([sample_dataset], keep_numbers=True, keep_decimals_together=False, split_num_units=True)
-print(sample_dataset)
-
-# Makes no sense to split decimals then keep number. Turns 5.1km to [5, ., 1km]
-print("\n=== CASE 6: keep_numbers=True, keep_decimals_together=False, split_num_units=False ===")
-process_datasets([sample_dataset], keep_numbers=True, keep_decimals_together=False, split_num_units=False)
-print(sample_dataset)
-
-
-
-# %%
+test_preprocessing(df, keep_numbers=True)
+test_preprocessing(df, keep_numbers=False)
