@@ -1,10 +1,23 @@
 from .patterns import _DOT_TIME_RANGE_LEAD_RE, _DOT_TIME_RE ,_DOT_HOUR_RE ,_SPACE_HRS_RE ,_BARE_HHMM_HRS_RE ,_ORDINAL_RE, _DAY_NUM_RE, _MONTHS, _YEAR_RE
 
 def _normalise_time_formats(text: str) -> str:
-    """Normalise informal time variants before tokenization.
- 
-    Order matters: range-lead must run before the trailing am/pm fix,
-    and dot-hour before the space-hrs fix.
+    """Normalise informal time variants to canonical colon form before tokenization.
+
+    Substitutions applied (in order):
+
+    1. Leading time in a range — ``"7.00 – 7.30 am"`` → ``"7:00 - 7:30am"``.
+    2. Dot-separated am/pm time — ``"6.30 am"`` → ``"6:30am"``.
+    3. Dot-separated 24 h time — ``"16.14hrs"`` → ``"16:14hrs"``.
+    4. Space before *hrs* suffix — ``"16:14 hrs"`` → ``"16:14hrs"``.
+    5. Military time with space — ``"1614 hrs"`` → ``"1614hrs"``.
+
+    Order is significant: the range-lead fix must precede the trailing am/pm
+    fix, and dot-hour must precede the space-hrs fix.
+
+    :param text: Raw text string prior to tokenization.
+    :type text: str
+    :returns: Text with time variants rewritten to the canonical colon form.
+    :rtype: str
     """
     text = _DOT_TIME_RANGE_LEAD_RE.sub(r'\1:\2 - ', text)
     text = _DOT_TIME_RE.sub(r'\1:\2\3', text)
@@ -14,11 +27,27 @@ def _normalise_time_formats(text: str) -> str:
     return text
 
 def _collapse_natural_dates(tokens: list[str]) -> list[str]:
-    """Collapse 3-token natural-language dates into a single '<date>' token.
- 
-    Matches (on raw tokens, case-insensitive):
-      - "<day_ord_or_num> <month> <4digit_year>"  e.g. "9th January 2018"
-      - "<month> <day_ord_or_num> <4digit_year>"  e.g. "January 9th 2018"
+    """Collapse three-token natural-language dates into a single ``<date>`` placeholder.
+
+    Scans *tokens* for consecutive triplets that match either of:
+
+    - *day-first*  — ``"<ordinal-or-day> <month-name> <4-digit-year>"``,
+      e.g. ``["9th", "January", "2018"]``.
+    - *month-first* — ``"<month-name> <ordinal-or-day> <4-digit-year>"``,
+      e.g. ``["January", "9th", "2018"]``.
+
+    Matching is case-insensitive for month names and ordinal suffixes.
+
+    .. note::
+        Must be called on **raw** tokens, before :func:`normalize_token` runs,
+        because it needs to inspect ordinal suffixes and month names.  After
+        normalisation those become ``<ord>`` / ``<num>`` and the pattern is
+        undetectable.
+
+    :param tokens: Raw token list from :func:`~modules.tokenization.handle_tokenization`.
+    :type tokens: list[str]
+    :returns: Token list with matching date triplets replaced by ``"<date>"``.
+    :rtype: list[str]
     """
     result = []
     i = 0
