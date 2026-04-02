@@ -30,9 +30,7 @@ def normalize_tokens(tokens: list[str], keep_numbers: bool = True) -> list[str]:
 
 
 def handle_tokenization(
-    text: str,
-    keep_decimals_together: bool = True,
-    split_num_units: bool = False,
+    text: str
 ) -> list[str]:
     """Tokenize text into domain-friendly tokens.
 
