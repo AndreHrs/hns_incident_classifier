@@ -1,25 +1,3 @@
-# ---
-# jupyter:
-#   jupytext:
-#     formats: ipynb,py:percent
-#     text_representation:
-#       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
-#       jupytext_version: 1.19.1
-#   kernelspec:
-#     display_name: Python [conda env:base] *
-#     language: python
-#     name: conda-base-py
-# ---
-
-# %%
-import pandas as pd
-
-df = pd.read_csv("dataset/final_dataset.csv")
-print(df.columns)
-
-# %%
 import sys
 import os
 import pandas as pd
@@ -66,5 +44,3 @@ def test_preprocessing(df, keep_numbers, n=5):
 
 test_preprocessing(df, keep_numbers=True)
 test_preprocessing(df, keep_numbers=False)
-
-# %%
