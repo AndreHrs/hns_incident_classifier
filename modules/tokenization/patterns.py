@@ -1,3 +1,28 @@
+"""Compiled regular-expression patterns used by the tokenization pipeline.
+
+Public token patterns (used in :mod:`modules.tokenization`):
+
+- :data:`TOKEN_PATTERN` — main domain-aware tokenizer.
+- :data:`DATE_TOKEN` — identifies ``DD/MM/YYYY``-style date tokens.
+- :data:`TIME_TOKEN` — identifies clock-time tokens.
+- :data:`ORDINAL_TOKEN` — identifies ordinal-number tokens.
+- :data:`NUM_TOKEN` — identifies plain integer/decimal tokens.
+
+Private pre-tokenization patterns (used in :mod:`modules.tokenization.normalize`):
+
+- :data:`_DOT_TIME_RANGE_LEAD_RE`
+- :data:`_DOT_TIME_RE`
+- :data:`_DOT_HOUR_RE`
+- :data:`_SPACE_HRS_RE`
+- :data:`_BARE_HHMM_HRS_RE`
+
+Private post-tokenization helpers:
+
+- :data:`_MONTHS` — set of full and abbreviated month name strings.
+- :data:`_ORDINAL_RE`, :data:`_DAY_NUM_RE`, :data:`_YEAR_RE` — used by
+  :func:`~modules.tokenization.normalize._collapse_natural_dates`.
+"""
+
 import re
 
 TOKEN_PATTERN = re.compile(
