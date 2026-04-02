@@ -1,0 +1,7 @@
+{
+  "Reference": "reference", 
+  "Date and Time of Event": "datetime", 
+  "Detailed Description of Event": "description", 
+  "Energy Type": "energy_type", 
+  "Type of Potential Damage": "potential_damage"
+}
