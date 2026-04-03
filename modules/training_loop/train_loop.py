@@ -1,92 +1,112 @@
-'''
-TRAINING LOOP MODULE // MAIN TRAINING FUNCTION
-- train_model_loop: Main training loop function that manages the entire training process, including early stopping
-    - train_one_epoch: Function that trains the model for one epoch and returns the training loss and accuracy  
-    - validate: Function that evaluates the model on the validation set and returns the validation loss and accuracy    
-
--> this should be adjusted so that different criterions can be used for energy and risk models, but for now we will just use the same criterion with different weights.
-
-Functionality to add: 
- - Support for different loss functions 
- - More detailed model saving (e.g., saving optimizer state, epoch number, etc.)
- - More detailed logging (e.g., using TensorBoard or a logging library instead of print statements)
- - Support for resuming training from a checkpoint
- - More flexible learning rate scheduling (e.g., support for different schedulers, or custom scheduling logic)
- - ....
-'''
-
+import copy
 import time
+from pathlib import Path
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from .validation import validate
+
 from .one_epoch import train_one_epoch
+from .validation import validate
+from .run_saving import _initialise_history, _append_metrics, _save_run_artifacts
+from .utility import _safe_class_name, _serialise_value, _is_better
+
 
 #  MAIN TRAINING LOOP // ensures all control variables are consistent // compatible with Dataloader-based pipelines
-def train_model_loop(model, optimiser, train_dl, valid_dl, epochs, device, patience, criterion_weights, model_type='Simple', save=True):
-    best_val_loss = float("inf")
-    best_model = None
+def train_model_loop(config):   # all top-level inputs stored in config dictionary, which is passed around to all functions that need it
+    """
+    Main training loop that manages the entire training process, including early stopping.
+    Args:
+        - config (dict): A configuration dictionary containing all necessary parameters and objects for training, such
+            as the model, dataloaders, optimizer, scheduler, criterion, number of epochs, device, patience for early stopping, etc.
+    Returns:
+        - run_summary (dict): A dictionary containing the training configuration, training history, best epoch, best metric value, best model state dict, and total training time.
+    """
+
+    history = _initialise_history()
     patience_counter = 0
-    epochs_history = {}
-    epochs_history["train_acc"] = []
-    epochs_history["val_acc"] = []
-    epochs_history["train_loss"] = []
-    epochs_history["val_loss"] = []
+    best_metric_value = None
+    best_epoch = None
+    best_model_state_dict = None
 
-    scheduler = optim.lr_scheduler.StepLR(optimiser, step_size=1, gamma=0.95)
-    criterion_weights = criterion_weights.to(device)
-    criterion = nn.CrossEntropyLoss(weight=criterion_weights)
+    print("=" * 120)
+    print(f"Training the {config['model_type']} model")
+    print(f"Run name: {config['run_name']}")
+    print(f"Best model tracked by: {config['best_metric']} ({config['best_metric_mode']})")
+    print("=" * 120)
 
-
-    print("="*114)
-    print(f'Training the {model_type} model')
-    print("="*114)
-
-    # Total training time
     training_start_time = time.time()
 
-    # Begin training
-    for epoch in range(1, epochs + 1):
+    for epoch in range(1, config["epochs"] + 1):
         epoch_start_time = time.time()
 
-        tr_loss, tr_acc = train_one_epoch(model, train_dl, optimiser, scheduler, criterion, device, need_length, energy_model)
-        val_loss, val_acc = validate(model, valid_dl, criterion, device, need_length, energy_model)
-        epochs_history["train_acc"].append(tr_acc)
-        epochs_history["val_acc"].append(val_acc)
-        epochs_history["train_loss"].append(tr_loss)
-        epochs_history["val_loss"].append(val_loss)
+        train_metrics = train_one_epoch(config)
+        val_metrics = validate(config)
 
-        print("-" * 114)
-        print(f"| End of Epoch {epoch:3d} "
-              f"| Time: {time.time() - epoch_start_time:6.2f}s "
-              f"| Train Loss: {tr_loss:6.3f} "
-              f"| Train Acc: {tr_acc:6.2f} "
-              f"| Val Loss: {val_loss:6.3f} "
-              f"| Val Acc: {val_acc:6.2f} |")
-        print("-" * 114)
+        if config["scheduler"] is not None and not config["scheduler_step_per_batch"]:
+            config["scheduler"].step()
 
-        # Early stopping
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
+        _append_metrics(history["train"], train_metrics)
+        _append_metrics(history["val"], val_metrics)
+        history["epoch_time_sec"].append(time.time() - epoch_start_time)
+
+        metric_name = config["best_metric"]
+        if metric_name.startswith("train_"):
+            current_metric_value = train_metrics[metric_name.replace("train_", "")]
+        elif metric_name.startswith("val_"):
+            current_metric_value = val_metrics[metric_name.replace("val_", "")]
+        else:
+            raise ValueError(
+                "best_metric must start with 'train_' or 'val_', "
+                f"e.g. 'val_loss', 'val_accuracy', 'val_f1_macro'. Got: {metric_name}"
+            )
+
+        print("-" * 120)
+        print(
+            f"| Epoch {epoch:03d} "
+            f"| Time: {history['epoch_time_sec'][-1]:7.2f}s "
+            f"| Train Loss: {train_metrics['loss']:.4f} "
+            f"| Train Acc: {train_metrics['accuracy'] * 100:.2f}% "
+            f"| Val Loss: {val_metrics['loss']:.4f} "
+            f"| Val Acc: {val_metrics['accuracy'] * 100:.2f}% "
+            f"| Val F1 Macro: {val_metrics['f1_macro']:.4f} "
+            f"| Val F1 Weighted: {val_metrics['f1_weighted']:.4f} "
+            f"| Best {metric_name}: {current_metric_value:.4f} |"
+        )
+        print("-" * 120)
+
+        if _is_better(current_metric_value, best_metric_value, config["best_metric_mode"]):
+            best_metric_value = current_metric_value
+            best_epoch = epoch
             patience_counter = 0
-            best_model = model.state_dict()  # or should i just use model
+            best_model_state_dict = copy.deepcopy(config["model"].state_dict())
         else:
             patience_counter += 1
-            if patience_counter >= patience:
-                print("Early stopping triggered!")
+            if patience_counter >= config["patience"]:
+                print(f"Early stopping triggered at epoch {epoch}.")
                 break
-
-        scheduler.step()
 
     total_train_time = time.time() - training_start_time
 
-    # Save best model to device
-    # REPLACE WITH MORE DETAILED MODEL SAVING FUNCTION - ISSUE #24
-    if best_model and save:
-        model.load_state_dict(best_model)
-        torch.save(model.state_dict(), f"{model_type}_model.pt")
-        print(f"Total training time: {total_train_time:.4f}s")
-        print(f"\tBest validation loss: {best_val_loss:.4f}")
-        print(f"\tModel saved to '{model_type}_model.pt'")
+    if best_model_state_dict is not None:
+        config["model"].load_state_dict(best_model_state_dict)
 
-    return epochs_history
+    run_summary = {
+        "config": config,
+        "history": history,
+        "best_epoch": best_epoch,
+        "best_metric_name": config["best_metric"],
+        "best_metric_value": best_metric_value,
+        "best_model_state_dict": best_model_state_dict,
+        "training_time_sec": total_train_time,
+    }
+
+    if config["save"] and best_model_state_dict is not None:
+        model_path, summary_path = _save_run_artifacts(config, run_summary)
+        print(f"Total training time: {total_train_time:.4f}s")
+        print(f"Best epoch: {best_epoch}")
+        print(f"Best {config['best_metric']}: {best_metric_value:.6f}")
+        print(f"Model saved to: {model_path}")
+        print(f"Run summary saved to: {summary_path}")
+
+    return run_summary

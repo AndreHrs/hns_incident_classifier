@@ -2,42 +2,71 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from .utility import _unpack_batch, _get_learning_rates
+from .metrics import _compute_classification_metrics
+
+
+
 # SINGLE EPOCH TRAINING LOOP // returning training accuracy and loss of one training epoch
-def train_one_epoch(model, dataloader, optimiser, scheduler, criterion, device, need_length, energy_model):
+def train_one_epoch(config):
+    """
+    Train the model for one epoch.
+    Args:
+        - config: A dictionary containing the following keys:
+            - model: The PyTorch model to train.
+            - optimiser: The optimizer to use for training.
+            - scheduler: The learning rate scheduler to use (optional).
+            - criterion: The loss function to use for training.
+            - train_dl: The DataLoader for the training data.
+            - num_classes: The number of classes in the classification task.
+            - clip_grad_max_norm: The maximum norm for gradient clipping (optional).
+    Returns:
+        - metrics (dict): A dictionary containing the calculated validation metrics, listed below, and the current learning rate:
+            - accuracy, precision, recall, f1 macro, precision weighted, recall weighted, f1 weighted, loss
+    """
+
+    model = config["model"]
+    optimiser = config["optimiser"]
+    scheduler = config["scheduler"]
+    criterion = config["criterion"]
+
     model.train()
-    total_loss, total_correct, total_examples = 0.0, 0, 0
 
-    for batch in dataloader:
-        optimiser.zero_grad(set_to_none=True)  # does not zero // efficiency and clarity
+    total_loss, total_examples = 0.0, 0
+    all_preds, all_targets = [], []
 
-        # With length -> Simple and BiDAF models
-        if need_length == True:
-            D, DL, Energy, Risk = batch
-            D, DL, Energy, Risk = D.to(device), DL.to(device), Energy.to(device), Risk.to(device)
-            logits = model(D, DL)
-        # Without length -> Transformer model
-        else:
-            D, _, Energy, Risk = batch
-            D, Energy, Risk = D.to(device), Energy.to(device), Risk.to(device)
-            logits = model(D) #if 'Transformer' in type(model).__name__ else model(D, Energy)
+    for batch in config["train_dl"]:
+        optimiser.zero_grad(set_to_none=True)
 
-        if energy_model:
-            Y = Energy
-        else:                
-            Y = Risk
-
-        # Compute loss & backpropagation
-        loss = criterion(logits, Y)
+        logits, targets = _unpack_batch(batch, config)
+        loss = criterion(logits, targets)
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+
+        if config["clip_grad_max_norm"] is not None:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), config["clip_grad_max_norm"])
+
         optimiser.step()
 
-        # Performance tracking
-        preds = logits.argmax(1)
-        total_correct += (preds == Y).sum().item()
-        total_loss += loss.item() * Y.size(0)
-        total_examples += Y.size(0)
+        if scheduler is not None and config["scheduler_step_per_batch"]:
+            scheduler.step()
 
-    avg_loss = total_loss / total_examples
-    avg_acc = total_correct / total_examples * 100
-    return avg_loss, avg_acc
+        preds = logits.argmax(dim=1)
+
+        batch_size = targets.size(0)
+        total_loss += loss.item() * batch_size
+        total_examples += batch_size
+
+        all_preds.append(preds.detach().cpu())
+        all_targets.append(targets.detach().cpu())
+
+    avg_loss = total_loss / max(total_examples, 1)
+    all_preds = torch.cat(all_preds) if all_preds else torch.tensor([])
+    all_targets = torch.cat(all_targets) if all_targets else torch.tensor([])
+
+    # Compute classification metrics
+    metrics = _compute_classification_metrics(y_true=all_targets, y_pred=all_preds, 
+                                              num_classes=config["num_classes"])
+    metrics["loss"] = avg_loss
+    metrics["lr"] = _get_learning_rates(config)
+
+    return metrics
