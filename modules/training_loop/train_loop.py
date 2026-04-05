@@ -1,5 +1,6 @@
 import copy
 import time
+from datetime import datetime
 from pathlib import Path
 
 import torch
@@ -8,7 +9,7 @@ import torch.optim as optim
 
 from .one_epoch import train_one_epoch
 from .validation import validate
-from .run_saving import _initialise_history, _append_metrics, _save_run_artifacts
+from .run_saving import RunSaver
 from .utility import _safe_class_name, _serialise_value, _is_better
 
 
@@ -21,13 +22,17 @@ def train_model_loop(config):   # all top-level inputs stored in config dictiona
             as the model, dataloaders, optimizer, scheduler, criterion, number of epochs, device, patience for early stopping, etc.
     Returns:
         - run_summary (dict): A dictionary containing the training configuration, training history, best epoch, best metric value, best model state dict, and total training time.
-    """
+    """    
 
-    history = _initialise_history()
+    run_saver = RunSaver()
+    training_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    save_dir = run_saver.create_directory(config, training_timestamp)
+
     patience_counter = 0
     best_metric_value = None
     best_epoch = None
     best_model_state_dict = None
+   
 
     print("=" * 120)
     print(f"Training the {config['model_type']} model")
@@ -46,32 +51,24 @@ def train_model_loop(config):   # all top-level inputs stored in config dictiona
         if config["scheduler"] is not None and not config["scheduler_step_per_batch"]:
             config["scheduler"].step()
 
-        _append_metrics(history["train"], train_metrics)
-        _append_metrics(history["val"], val_metrics)
-        history["epoch_time_sec"].append(time.time() - epoch_start_time)
+        run_saver.history["epoch_time_sec"].append(time.time() - epoch_start_time)
+        
+        run_saver.append_metrics("train", train_metrics)
+        run_saver.append_metrics("val", val_metrics)
 
-        metric_name = config["best_metric"]
-        if metric_name.startswith("train_"):
-            current_metric_value = train_metrics[metric_name.replace("train_", "")]
-        elif metric_name.startswith("val_"):
-            current_metric_value = val_metrics[metric_name.replace("val_", "")]
-        else:
-            raise ValueError(
-                "best_metric must start with 'train_' or 'val_', "
-                f"e.g. 'val_loss', 'val_accuracy', 'val_f1_macro'. Got: {metric_name}"
-            )
+        current_metric_value = val_metrics[config["best_metric"]]
 
         print("-" * 120)
         print(
             f"| Epoch {epoch:03d} "
-            f"| Time: {history['epoch_time_sec'][-1]:7.2f}s "
+            f"| Time: {run_saver.history['epoch_time_sec'][-1]:7.2f}s "
             f"| Train Loss: {train_metrics['loss']:.4f} "
             f"| Train Acc: {train_metrics['accuracy'] * 100:.2f}% "
             f"| Val Loss: {val_metrics['loss']:.4f} "
             f"| Val Acc: {val_metrics['accuracy'] * 100:.2f}% "
             f"| Val F1 Macro: {val_metrics['f1_macro']:.4f} "
             f"| Val F1 Weighted: {val_metrics['f1_weighted']:.4f} "
-            f"| Best {metric_name}: {current_metric_value:.4f} |"
+            f"| Best {config["best_metric"]}: {current_metric_value:.4f} |"
         )
         print("-" * 120)
 
@@ -93,7 +90,7 @@ def train_model_loop(config):   # all top-level inputs stored in config dictiona
 
     run_summary = {
         "config": config,
-        "history": history,
+        "history": run_saver.history,
         "best_epoch": best_epoch,
         "best_metric_name": config["best_metric"],
         "best_metric_value": best_metric_value,
@@ -102,7 +99,10 @@ def train_model_loop(config):   # all top-level inputs stored in config dictiona
     }
 
     if config["save"] and best_model_state_dict is not None:
-        model_path, summary_path = _save_run_artifacts(config, run_summary)
+        model_path, summary_path = run_saver.save_artifacts(config, run_summary, save_dir)
+        run_saver.plot_history(best_epoch, save_dir, config["save_name"])
+        
+        print(f"Run saved to: {save_dir}")
         print(f"Total training time: {total_train_time:.4f}s")
         print(f"Best epoch: {best_epoch}")
         print(f"Best {config['best_metric']}: {best_metric_value:.6f}")
