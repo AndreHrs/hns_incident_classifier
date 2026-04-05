@@ -13,8 +13,8 @@ def _compute_classification_metrics(y_true, y_pred, num_classes=None):
         - num_classes: The number of classes in the classification task. 
             -> If None, it will be inferred from the data.
     Returns:
-        - dict: A dictionary containing the computed metrics.
-            -> currently includes 'accuracy', 'precision_macro', 'recall_macro', 'f1_macro', 'precision_weighted', 'recall_weighted', 'f1_weighted'.
+        - metrics (dict): Dictionary containing the computed metrics.
+            -> currently includes: 'accuracy', 'precision_macro', 'recall_macro', 'f1_macro', 'precision_weighted', 'recall_weighted', 'f1_weighted'.
     
     Notes:
         - This function assumes that class labels are integer-encoded from 0 to num_classes-1.

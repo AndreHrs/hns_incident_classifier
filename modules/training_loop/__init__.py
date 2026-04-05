@@ -39,6 +39,7 @@ Functionality notes ():
  - ....etc.
 '''
 
+
 # EXPOSED TRAINING FUNCTION // main function to call for training a model, which builds the config and calls the main training loop
 def training(
              model,
@@ -51,16 +52,15 @@ def training(
              criterion_weights=None,
              model_type="Simple",
              save=True,
-             scheduler=None,
-             criterion=None,
+             scheduler=None,        # need to be defined outside
+             criterion=None,        # need to be defined outside
              need_length=False,
              energy_model=False,
-             best_metric="val_loss",
+             best_metric="loss",    # must be in: "loss", "accuracy", "precision_macro", "recall_macro", "f1_macro", "precision_weighted", "recall_weighted", "f1_weighted"
              best_metric_mode=None,
              clip_grad_max_norm=1.0,
              scheduler_step_per_batch=False,
-             save_dir=".",
-             save_name=None,
+             save_dir="trained_models",
              run_name=None,
              compute_train_metrics=False,
              num_classes=None,
@@ -89,7 +89,6 @@ def training(
         clip_grad_max_norm=clip_grad_max_norm,
         scheduler_step_per_batch=scheduler_step_per_batch,
         save_dir=save_dir,
-        save_name=save_name,
         run_name=run_name,
         compute_train_metrics=compute_train_metrics,
         num_classes=num_classes,

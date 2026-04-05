@@ -8,8 +8,8 @@ from .utility import _safe_class_name
 
 # CONFIG AND UTILITY FUNCTIONS FOR TRAINING LOOP
 def _build_train_config(model, train_dl, valid_dl, epochs, device, patience, criterion_weights, model_type="Simple", save=True, optimiser=None, scheduler=None, criterion=None,
-                  need_length=False, energy_model=False, best_metric="val_loss", best_metric_mode=None, clip_grad_max_norm=1.0, scheduler_step_per_batch=False,
-                  save_dir=".", save_name=None, run_name=None, num_classes=None, extra_config=None,
+                  need_length=False, energy_model=False, best_metric="loss", best_metric_mode=None, clip_grad_max_norm=1.0, scheduler_step_per_batch=False,
+                  save_dir="trained_models", run_name=None, num_classes=None, extra_config=None,
                  ):
     """Build the training configuration dictionary.""" 
 
@@ -25,12 +25,20 @@ def _build_train_config(model, train_dl, valid_dl, epochs, device, patience, cri
             criterion_weights = criterion_weights.to(device)
         criterion = nn.CrossEntropyLoss(weight=criterion_weights)
 
+    if best_metric not in {"loss", "accuracy", "precision_macro", "recall_macro", "f1_macro", "precision_weighted", "recall_weighted", "f1_weighted"}:
+        raise ValueError(
+            f"Invalid best_metric: {best_metric}. Must be one of 'loss', 'accuracy', 'precision_macro', 'recall_macro', 'f1_macro', 'precision_weighted', 'recall_weighted', 'f1_weighted'."
+        )
+
     if best_metric_mode is None:
         # Metrics containing "loss" are minimised; everything else maximised.
         best_metric_mode = "min" if "loss" in best_metric.lower() else "max"
 
-    if save_name is None:
-        save_name = f"{model_type}_model.pt"
+    # Derive save_name from run_name or model_type
+    if run_name:
+        save_name = run_name.lower().replace(" ", "_")[:10]
+    else:
+        save_name = model_type.lower().replace(" ", "_")[:10]
 
     config = {
         "model": model,
@@ -47,7 +55,7 @@ def _build_train_config(model, train_dl, valid_dl, epochs, device, patience, cri
         "save": save,
         "save_dir": save_dir,
         "save_name": save_name,
-        "run_name": run_name or f"{model_type}_{int(time.time())}",
+        "run_name": run_name or f"{save_name}_run_{int(time.time())}",
         "need_length": need_length,
         "energy_model": energy_model,
         "best_metric": best_metric,
