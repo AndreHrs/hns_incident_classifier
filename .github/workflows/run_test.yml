@@ -1,41 +1,36 @@
-# This is a basic workflow to help you get started with Actions
-
 name: Run Tests
 
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   pull_request:
     branches: ["main", "dev"]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
 
-      # setup the python environment with python 3.11
       - name: Set up Python
+        id: setup-python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
+
+      - name: Cache virtualenv
+        id: cache-venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('requirements-ci.txt') }}
 
       - name: Install dependencies
+        if: steps.cache-venv.outputs.cache-hit != 'true'
         run: |
-          pip install pandas pytest contractions spacy
-
-      - name: Download spaCy model
-        run: python -m spacy download en_core_web_sm
+          python -m venv .venv
+          .venv/bin/pip install -r requirements-ci.txt
+          .venv/bin/python -m spacy download en_core_web_sm
 
       - name: Run tests
-        run: pytest tests/ -v
+        run: .venv/bin/pytest tests/ -v
