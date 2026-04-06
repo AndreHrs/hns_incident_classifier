@@ -258,7 +258,7 @@ class TestLemmaHandlerViaPipeline:
     def test_basic_lemmatization(self, proc_no_ner):
         df = pd.DataFrame({"text": ["workers were running"]})
         result = proc_no_ner.pre_process_df(df, "text")
-        tokens = result["text_tokens"].iloc[0]
+        tokens = result["text_tokens_lemma"].iloc[0]
         # "workers" → "worker", "running" → "run"
         assert "worker" in tokens
         assert "run" in tokens
@@ -300,7 +300,7 @@ class TestLemmaHandlerViaPipeline:
         )
         df = pd.DataFrame({"text": ["there were 3 workers injured"]})
         result = proc.pre_process_df(df, "text")
-        tokens = result["text_tokens"].iloc[0]
+        tokens = result["text_tokens_lemma"].iloc[0]
         # NER overrides keep_numbers — placeholder expected
         assert "<num>" in tokens
 
@@ -308,7 +308,7 @@ class TestLemmaHandlerViaPipeline:
         """With use_ner=False, numeric tokens are not replaced by NER."""
         df = pd.DataFrame({"text": ["there were 3 workers"]})
         result = proc_no_ner.pre_process_df(df, "text")
-        tokens = result["text_tokens"].iloc[0]
+        tokens = result["text_tokens_lemma"].iloc[0]
         assert "<num>" not in tokens
 
     # ── filter_stop_words ────────────────────────────────────────────────────
@@ -316,7 +316,7 @@ class TestLemmaHandlerViaPipeline:
     def test_stop_words_filtered(self, proc_stop_words):
         df = pd.DataFrame({"text": ["the worker was injured"]})
         result = proc_stop_words.pre_process_df(df, "text")
-        tokens = result["text_tokens"].iloc[0]
+        tokens = result["text_tokens_lemma"].iloc[0]
         # "the", "was" are stop words
         assert "the" not in tokens
         assert "was" not in tokens
@@ -324,7 +324,7 @@ class TestLemmaHandlerViaPipeline:
     def test_stop_words_not_filtered_by_default(self, proc_no_ner):
         df = pd.DataFrame({"text": ["the worker was injured"]})
         result = proc_no_ner.pre_process_df(df, "text")
-        tokens = result["text_tokens"].iloc[0]
+        tokens = result["text_tokens_lemma"].iloc[0]
         assert "the" in tokens
 
     # ── short_tokens_threshold ───────────────────────────────────────────────
@@ -333,6 +333,6 @@ class TestLemmaHandlerViaPipeline:
         # threshold=4: tokens shorter than 4 chars are dropped
         df = pd.DataFrame({"text": ["a big cat sat"]})
         result = proc_short_token.pre_process_df(df, "text")
-        tokens = result["text_tokens"].iloc[0]
+        tokens = result["text_tokens_lemma"].iloc[0]
         for tok in tokens:
             assert len(tok) >= 4
