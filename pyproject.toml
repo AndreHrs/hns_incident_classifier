@@ -5,6 +5,10 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "D"]
 ignore = ["E501"]
+exclude = [
+    "main_notebook.py",
+    "main_notebook.ipynb",
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
