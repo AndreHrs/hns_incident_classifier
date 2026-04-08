@@ -1,7 +1,9 @@
+"""Training loop module exposing the top-level training entry point."""
+
 from .config import _build_train_config
 from .train_loop import train_model_loop
 
-'''
+"""
 TRAINING LOOP MODULE // Files related to the main training loop and its components
 - config: 
         Function to build the training configuration dictionary, which includes all necessary parameters and objects for training
@@ -37,36 +39,65 @@ Functionality notes ():
     -> currently supports a default StepLR scheduler, or use of a custom scheduler if provided. 
         -> could be extended to support a wider range of built-in schedulers, or allow for custom scheduling logic to be implemented by the user
  - ....etc.
-'''
+"""
 
 
 # EXPOSED TRAINING FUNCTION // main function to call for training a model, which builds the config and calls the main training loop
 def training(
-             model,
-             optimiser=None,
-             train_dl=None,
-             valid_dl=None,
-             epochs=10,
-             device="cpu",
-             patience=3,
-             criterion_weights=None,
-             model_type="Simple",
-             save=True,
-             scheduler=None,        # need to be defined outside
-             criterion=None,        # need to be defined outside
-             need_length=False,
-             energy_model=False,
-             best_metric="loss",    # must be in: "loss", "accuracy", "precision_macro", "recall_macro", "f1_macro", "precision_weighted", "recall_weighted", "f1_weighted"
-             best_metric_mode=None,
-             clip_grad_max_norm=1.0,
-             scheduler_step_per_batch=False,
-             save_dir="trained_models",
-             run_name=None,
-             compute_train_metrics=False,
-             num_classes=None,
-             extra_config=None,
-            ):
-    
+    model,
+    optimiser=None,
+    train_dl=None,
+    valid_dl=None,
+    epochs=10,
+    device="cpu",
+    patience=3,
+    criterion_weights=None,
+    model_type="Simple",
+    save=True,
+    scheduler=None,  # need to be defined outside
+    criterion=None,  # need to be defined outside
+    need_length=False,
+    energy_model=False,
+    best_metric="loss",  # must be in: "loss", "accuracy", "precision_macro", "recall_macro", "f1_macro", "precision_weighted", "recall_weighted", "f1_weighted"
+    best_metric_mode=None,
+    clip_grad_max_norm=1.0,
+    scheduler_step_per_batch=False,
+    save_dir="trained_models",
+    run_name=None,
+    compute_train_metrics=False,
+    num_classes=None,
+    extra_config=None,
+):
+    """Build training config and run the full training loop.
+
+    Args:
+        model: PyTorch model to train.
+        optimiser: Optimizer instance. Defaults to Adam with lr=1e-3.
+        train_dl: DataLoader for training data.
+        valid_dl: DataLoader for validation data.
+        epochs: Number of training epochs.
+        device: Device string, e.g. 'cpu' or 'cuda'.
+        patience: Early stopping patience in epochs.
+        criterion_weights: Optional class weights for the loss function.
+        model_type: Label used for saving and logging.
+        save: Whether to save model artifacts after training.
+        scheduler: Learning rate scheduler. Defaults to StepLR.
+        criterion: Loss function. Defaults to CrossEntropyLoss.
+        need_length: Whether the model expects sequence lengths as input.
+        energy_model: If True, predict energy type; otherwise predict risk.
+        best_metric: Metric used to select the best model checkpoint.
+        best_metric_mode: 'min' or 'max'. Inferred from best_metric if None.
+        clip_grad_max_norm: Max norm for gradient clipping.
+        scheduler_step_per_batch: Step scheduler per batch instead of per epoch.
+        save_dir: Directory to save model artifacts.
+        run_name: Optional name for the run.
+        compute_train_metrics: Whether to compute metrics on the training set.
+        num_classes: Number of output classes.
+        extra_config: Optional dict of additional config keys to merge.
+
+    Returns:
+        Run summary dictionary with history, best epoch, and best metric value.
+    """
     # All top-level inputs are collected into `config` and that config is passed everywhere else.
     # This keeps the function signatures clean and makes it easy to add new parameters without needing to change a lot of function signatures.
     train_config = _build_train_config(

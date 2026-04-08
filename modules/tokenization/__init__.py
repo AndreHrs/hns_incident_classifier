@@ -1,7 +1,10 @@
+"""Tokenization pipeline for domain-aware text processing."""
+
 import re
 
 from .patterns import TOKEN_PATTERN, DATE_TOKEN, TIME_TOKEN, ORDINAL_TOKEN, NUM_TOKEN
 from .normalize import _normalise_time_formats, _collapse_natural_dates
+
 
 def _get_tokenizer() -> re.Pattern:
     """Return the compiled domain-aware tokenizer pattern.
@@ -13,8 +16,7 @@ def _get_tokenizer() -> re.Pattern:
 
 
 def normalize_token(token: str) -> str:
-    """Replace a single token with a semantic placeholder if it matches a
-    known numeric, date, time, or ordinal pattern.
+    """Replace a single token with a semantic placeholder if it matches a known numeric, date, time, or ordinal pattern.
 
     Placeholder mapping:
 
@@ -60,13 +62,11 @@ def normalize_tokens(tokens: list[str], keep_numbers: bool = True) -> list[str]:
     """
     if keep_numbers:
         return tokens
-    tokens = _collapse_natural_dates(tokens) # collapse the dates first
+    tokens = _collapse_natural_dates(tokens)  # collapse the dates first
     return [normalize_token(t) for t in tokens]
 
 
-def handle_tokenization(
-    text: str
-) -> list[str]:
+def handle_tokenization(text: str) -> list[str]:
     """Tokenize text into domain-friendly tokens.
 
     A pre-pass via
@@ -79,6 +79,6 @@ def handle_tokenization(
     :returns: Ordered list of tokens extracted from *text*.
     :rtype: list[str]
     """
-    text = _normalise_time_formats(text)   # pre-pass for time variants
+    text = _normalise_time_formats(text)  # pre-pass for time variants
     regex = _get_tokenizer()
     return regex.findall(text)
