@@ -4,3 +4,4 @@ contractions
 spacy
 torch
 transformers
+matplotlib

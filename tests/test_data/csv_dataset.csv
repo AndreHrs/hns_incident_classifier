@@ -1,0 +1,6 @@
+reference,datetime,description,energy_type,potential_damage
+REF001,2024-01-01,worker fell from scaffold,0,1
+REF002,2024-01-02,chemical spill on floor,1,0
+REF003,2024-01-03,electrical fault near panel,2,1
+REF004,2024-01-04,heavy object dropped,0,0
+REF005,2024-01-05,slip on wet surface,1,1
