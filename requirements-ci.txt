@@ -3,4 +3,5 @@ pytest
 contractions
 spacy
 torch
+transformers
 matplotlib
