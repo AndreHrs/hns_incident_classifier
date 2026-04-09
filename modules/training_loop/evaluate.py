@@ -42,8 +42,8 @@ def evaluate(config):
     criterion = config["criterion"]
     class_names = config.get("class_names", [])
     threshold = config.get("threshold", 0.80)
-    temperature = config.get("temperature", 1.5)
-    use_temperature = config.get("use_temperature", True)
+    temperature = config.get("temperature", 1.0)
+    use_temperature = config.get("use_temperature", False)
     save_dir = config.get("save_dir", None)
 
     model.eval()
