@@ -1,3 +1,5 @@
+"""BERT transformer embedding backend implementation."""
+
 import torch
 import torch.nn as nn
 from transformers import AutoModel
@@ -22,6 +24,7 @@ class BertEmbeddingBackend(nn.Module, BaseEmbeddingBackend):
     """
 
     def __init__(self, config: BertEmbeddingConfig) -> None:
+        """Load the transformer and apply configuration (freeze if requested)."""
         super().__init__()
         config.validate()
         self.config = config

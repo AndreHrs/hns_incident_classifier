@@ -1,3 +1,5 @@
+"""Hugging Face tokenizer wrapper for BERT embedding inputs."""
+
 from typing import Sequence
 
 import torch
@@ -18,6 +20,7 @@ class BertTokenizerWrapper:
     """
 
     def __init__(self, config: BertEmbeddingConfig) -> None:
+        """Load the tokenizer for ``config.model_name``."""
         config.validate()
         self.config = config
         self.tokenizer = AutoTokenizer.from_pretrained(config.model_name)

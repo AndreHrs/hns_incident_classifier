@@ -1,3 +1,5 @@
+"""Configuration dataclass for BERT-based embedding backends."""
+
 from dataclasses import dataclass
 
 

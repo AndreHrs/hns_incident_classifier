@@ -1,3 +1,5 @@
+"""Abstract base for pluggable embedding backends."""
+
 from abc import ABC, abstractmethod
 
 from .embedding_output import EmbeddingOutput

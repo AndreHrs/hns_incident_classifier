@@ -1,3 +1,5 @@
+"""Shared dataclass for token- and sentence-level embedding outputs."""
+
 from dataclasses import dataclass
 from typing import Optional
 
