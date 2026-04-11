@@ -65,35 +65,35 @@ NUM_TOKEN = re.compile(r"^\d+(?:\.\d+)?$")
 #   "16:14 hrs"     → "16:14hrs" (space before hrs)
 #   "1614 hrs"      → "1614hrs"  (space before hrs in military time)
 # ---------------------------------------------------------------------------
- 
+
 # Leading time in a range: "7.00 – 7.30 am" — the "7.00" part has no am/pm
 # directly after it, so we need to fix it before the trailing time gets fixed.
 _DOT_TIME_RANGE_LEAD_RE = re.compile(
-    r'\b(\d{1,2})\.(\d{2})\s*-\s*(?=\d{1,2}[:.]\d{2})',
+    r"\b(\d{1,2})\.(\d{2})\s*-\s*(?=\d{1,2}[:.]\d{2})",
     re.IGNORECASE,
 )
- 
+
 # "6.30 am", "7.30 pm", "6.30am" (zero-width space ok)
 _DOT_TIME_RE = re.compile(
-    r'\b(\d{1,2})\.(\d{2})\s*(am|pm)\b',
+    r"\b(\d{1,2})\.(\d{2})\s*(am|pm)\b",
     re.IGNORECASE,
 )
- 
+
 # "16.14hrs", "16.14hr", "16.14 hrs", "16.14 hr"
 _DOT_HOUR_RE = re.compile(
-    r'\b(\d{1,4})\.(\d{2})\s*(hrs?)\b',
+    r"\b(\d{1,4})\.(\d{2})\s*(hrs?)\b",
     re.IGNORECASE,
 )
- 
+
 # "16:14 hrs", "16:14 hr"
 _SPACE_HRS_RE = re.compile(
-    r'\b(\d{1,2}:\d{2})\s+(hrs?)\b',
+    r"\b(\d{1,2}:\d{2})\s+(hrs?)\b",
     re.IGNORECASE,
 )
- 
+
 # "1614 hrs", "1614 hr"
 _BARE_HHMM_HRS_RE = re.compile(
-    r'\b(\d{3,4})\s+(hrs?)\b',
+    r"\b(\d{3,4})\s+(hrs?)\b",
     re.IGNORECASE,
 )
 
@@ -112,12 +112,32 @@ _BARE_HHMM_HRS_RE = re.compile(
 # to read the ordinal suffix and month name. Running after normalize_token
 # would give us ['<ord>', 'january', '<num>'] and the pattern is lost.
 # ---------------------------------------------------------------------------
- 
+
 _MONTHS = {
-    'january', 'february', 'march', 'april', 'may', 'june',
-    'july', 'august', 'september', 'october', 'november', 'december',
-    'jan', 'feb', 'mar', 'apr', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
+    "jan",
+    "feb",
+    "mar",
+    "apr",
+    "jun",
+    "jul",
+    "aug",
+    "sep",
+    "oct",
+    "nov",
+    "dec",
 }
-_ORDINAL_RE = re.compile(r'^\d+(?:st|nd|rd|th)$', re.IGNORECASE)
-_DAY_NUM_RE = re.compile(r'^([1-9]|[12]\d|3[01])$')
-_YEAR_RE = re.compile(r'^(19|20)\d{2}$')
+_ORDINAL_RE = re.compile(r"^\d+(?:st|nd|rd|th)$", re.IGNORECASE)
+_DAY_NUM_RE = re.compile(r"^([1-9]|[12]\d|3[01])$")
+_YEAR_RE = re.compile(r"^(19|20)\d{2}$")

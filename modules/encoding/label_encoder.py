@@ -1,3 +1,5 @@
+"""String label to integer id encoding (fit/encode/decode)."""
+
 from typing import Iterable
 
 
@@ -9,6 +11,7 @@ class LabelEncoder:
     """
 
     def __init__(self):
+        """Create an unfitted encoder with empty label mappings."""
         self.label_to_id: dict[str, int] = {}
         self.id_to_label: dict[int, str] = {}
         self._fitted = False

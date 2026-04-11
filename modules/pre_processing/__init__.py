@@ -1,3 +1,5 @@
+"""Text pre-processing pipeline for NLP tasks."""
+
 import unicodedata
 import re
 
@@ -73,6 +75,7 @@ class OneTextPreProcessor:
         lemma_config: dict = {},
         domain_terms: dict | None = None,
     ):
+        """Initialize the pre-processor with the given configuration."""
         self.keep_numbers = keep_numbers
         self.column_maps = column_map
         self.drop_null = drop_null
@@ -84,7 +87,7 @@ class OneTextPreProcessor:
             self._domain_terms = _DEFAULT_DOMAIN_TERMS
         else:
             self._domain_terms = domain_terms
-    
+
     def _expand_domain_terms(self, text: str) -> str:
         """Expand domain-specific abbreviations before any other processing.
 
@@ -106,7 +109,9 @@ class OneTextPreProcessor:
         :returns: String with domain abbreviations expanded.
         :rtype: str
         """
-        for pattern, replacement in self._domain_terms.get("case_sensitive", {}).items():
+        for pattern, replacement in self._domain_terms.get(
+            "case_sensitive", {}
+        ).items():
             text = re.sub(pattern, replacement, text)
 
         for abbrev, full_name in self._domain_terms.get("equipment", {}).items():
@@ -136,19 +141,19 @@ class OneTextPreProcessor:
         """
         # 1. NFKC first, normalize unicode fractions, ligatures, fullwidth
         text = unicodedata.normalize("NFKC", text)
-        
+
         # 2. Normalize quotes, dashes, and whitespace without changing token meaning.
         text = text.replace("“", '"').replace("”", '"')
         text = text.replace("’", "'").replace("‘", "'")
         text = text.replace("–", "-").replace("—", "-")
-        
+
         # 3. Whitespace
         text = re.sub(r"\s+", " ", text).strip()
-        
+
         text = text.lower()
 
         return text
-    
+
     def _rename_columns(self, data_frame: pd.DataFrame) -> pd.DataFrame:
         """Rename DataFrame columns according to ``self.column_maps``.
 
@@ -185,7 +190,7 @@ class OneTextPreProcessor:
         """
         df = data_frame.copy()
         df = self._rename_columns(df)
-        if (self.drop_null):
+        if self.drop_null:
             df = df.dropna(subset=[text_col])
 
         if self._domain_terms:
@@ -193,8 +198,8 @@ class OneTextPreProcessor:
 
         apply_contraction_handler(df, text_col)
 
-        df[f"{text_col}_clean"] = df[text_col].astype(str).apply(
-            lambda s: self._basic_text_cleanup(s)
+        df[f"{text_col}_clean"] = (
+            df[text_col].astype(str).apply(lambda s: self._basic_text_cleanup(s))
         )
 
         df[f"{text_col}_tokens_raw"] = df[f"{text_col}_clean"].apply(

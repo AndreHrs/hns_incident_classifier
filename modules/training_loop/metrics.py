@@ -1,3 +1,5 @@
+"""Classification metrics computation using pure PyTorch."""
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -6,19 +8,19 @@ import torch.optim as optim
 # CLASSIFICATION METRICS COMPUTATION // Compute common classification metrics (accuracy, precision, recall, F1) from true and predicted labels
 # Pure PyTorch implementation to avoid adding a hard dependency on sklearn.
 def _compute_classification_metrics(y_true, y_pred, num_classes=None):
-    """
+    """Compute common classification metrics from true and predicted labels.
+
     Args:
-        - y_true: Tensor of shape (num_samples,) containing true class labels.
-        - y_pred: Tensor of shape (num_samples,) containing predicted class labels.
-        - num_classes: The number of classes in the classification task. 
-            -> If None, it will be inferred from the data.
+        y_true: Tensor of shape (num_samples,) containing true class labels.
+        y_pred: Tensor of shape (num_samples,) containing predicted class labels.
+        num_classes: The number of classes. Inferred from data if None.
+
     Returns:
-        - metrics (dict): Dictionary containing the computed metrics.
-            -> currently includes: 'accuracy', 'precision_macro', 'recall_macro', 'f1_macro', 'precision_weighted', 'recall_weighted', 'f1_weighted'.
-    
+        metrics Dictionary containing accuracy, precision/recall/f1 macro and weighted.
+
     Notes:
-        - This function assumes that class labels are integer-encoded from 0 to num_classes-1.
-        - If y_true is empty, all metrics will be returned as 0.0 to avoid division by zero errors.
+        Class labels must be integer-encoded from 0 to num_classes-1.
+        If y_true is empty, all metrics are returned as 0.0.
     """
     y_true = torch.as_tensor(y_true, dtype=torch.long)
     y_pred = torch.as_tensor(y_pred, dtype=torch.long)
@@ -48,7 +50,12 @@ def _compute_classification_metrics(y_true, y_pred, num_classes=None):
     eps = 1e-12
     precision_per_class = tp / (predicted + eps)
     recall_per_class = tp / (support + eps)
-    f1_per_class = 2 * precision_per_class * recall_per_class / (precision_per_class + recall_per_class + eps)
+    f1_per_class = (
+        2
+        * precision_per_class
+        * recall_per_class
+        / (precision_per_class + recall_per_class + eps)
+    )
 
     weights = support / (support.sum() + eps)
 
@@ -65,4 +72,3 @@ def _compute_classification_metrics(y_true, y_pred, num_classes=None):
     }
 
     return metrics
-

@@ -20,7 +20,13 @@ import torch
 from modules.data_loader import df_to_dataloader
 
 CSV_PATH = Path(__file__).parent / "test_data" / "csv_dataset.csv"
-EXPECTED_COLUMNS = {"reference", "datetime", "description", "energy_type", "potential_damage"}
+EXPECTED_COLUMNS = {
+    "reference",
+    "datetime",
+    "description",
+    "energy_type",
+    "potential_damage",
+}
 
 
 @pytest.fixture
@@ -32,11 +38,18 @@ def raw_df():
 def encoded_df(raw_df):
     """Simulate post-encoding state: token lists added, labels already integers."""
     df = raw_df.copy()
-    df["description_tokens"] = [[1, 2, 3], [4, 5], [6, 7, 8, 9], [1, 3], [2, 4, 5, 6, 7]]
+    df["description_tokens"] = [
+        [1, 2, 3],
+        [4, 5],
+        [6, 7, 8, 9],
+        [1, 3],
+        [2, 4, 5, 6, 7],
+    ]
     return df
 
 
 # ── CSV loading ───────────────────────────────────────────────────────────────
+
 
 class TestCSVLoading:
     def test_loads_without_error(self):
@@ -58,6 +71,7 @@ class TestCSVLoading:
 
 
 # ── End-to-end: CSV → DataLoader ─────────────────────────────────────────────
+
 
 class TestCSVToDataloader:
     def _make_dl(self, df, **kwargs):
@@ -97,5 +111,10 @@ class TestCSVToDataloader:
     def test_labels_match_csv_values(self, encoded_df):
         dl = self._make_dl(encoded_df)
         _, _, Energy, Risk = next(iter(dl))
-        assert torch.equal(Energy, torch.tensor(encoded_df["energy_type"].tolist(), dtype=torch.long))
-        assert torch.equal(Risk,   torch.tensor(encoded_df["potential_damage"].tolist(), dtype=torch.long))
+        assert torch.equal(
+            Energy, torch.tensor(encoded_df["energy_type"].tolist(), dtype=torch.long)
+        )
+        assert torch.equal(
+            Risk,
+            torch.tensor(encoded_df["potential_damage"].tolist(), dtype=torch.long),
+        )

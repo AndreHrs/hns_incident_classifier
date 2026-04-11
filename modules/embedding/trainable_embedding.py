@@ -1,3 +1,5 @@
+"""Trainable token embedding backend using ``torch.nn.Embedding``."""
+
 import torch
 import torch.nn as nn
 
@@ -27,6 +29,7 @@ class TrainableEmbeddingBackend(nn.Module, BaseEmbeddingBackend):
     """
 
     def __init__(self, config: ScratchEmbeddingConfig) -> None:
+        """Build the embedding layer from ``config`` and initialize weights."""
         super().__init__()
         config.validate()
         self.config = config

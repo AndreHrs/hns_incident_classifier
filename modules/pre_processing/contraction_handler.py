@@ -1,3 +1,4 @@
+"""Contraction expansion utilities for text pre-processing."""
 
 import contractions
 import pandas as pd

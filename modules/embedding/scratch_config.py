@@ -1,3 +1,5 @@
+"""Configuration for scratch-trained (nn.Embedding) backends."""
+
 from dataclasses import dataclass
 
 

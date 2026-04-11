@@ -14,11 +14,13 @@ from modules.data_loader import df_to_dataloader
 @pytest.fixture
 def sample_df():
     """Minimal DataFrame with integer-encoded labels and token-id lists."""
-    return pd.DataFrame({
-        "tokens":  [[1, 2, 3], [4, 5], [6, 7, 8, 9]],
-        "energy":  [0, 1, 2],
-        "risk":    [1, 0, 1],
-    })
+    return pd.DataFrame(
+        {
+            "tokens": [[1, 2, 3], [4, 5], [6, 7, 8, 9]],
+            "energy": [0, 1, 2],
+            "risk": [1, 0, 1],
+        }
+    )
 
 
 class TestDfToDataloader:
@@ -45,7 +47,7 @@ class TestDfToDataloader:
     def test_batch_order_D_DL_Energy_Risk(self, sample_df):
         dl = self._make_dl(sample_df)
         D, DL, Energy, Risk = next(iter(dl))
-        assert D.shape[0] == len(sample_df)       # batch dimension
+        assert D.shape[0] == len(sample_df)  # batch dimension
         assert DL.shape == (len(sample_df),)
         assert Energy.shape == (len(sample_df),)
         assert Risk.shape == (len(sample_df),)
@@ -80,12 +82,12 @@ class TestDfToDataloader:
         dl = self._make_dl(sample_df)
         _, _, Energy, Risk = next(iter(dl))
         assert torch.equal(Energy, torch.tensor([0, 1, 2], dtype=torch.long))
-        assert torch.equal(Risk,   torch.tensor([1, 0, 1], dtype=torch.long))
+        assert torch.equal(Risk, torch.tensor([1, 0, 1], dtype=torch.long))
 
     def test_batch_size_splits_correctly(self, sample_df):
         dl = self._make_dl(sample_df, batch_size=2)
         batches = list(iter(dl))
-        assert len(batches) == 2          # 3 rows → batches of 2 and 1
+        assert len(batches) == 2  # 3 rows → batches of 2 and 1
         assert batches[0][0].shape[0] == 2
         assert batches[1][0].shape[0] == 1
 

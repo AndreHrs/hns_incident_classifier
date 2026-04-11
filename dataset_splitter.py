@@ -1,3 +1,5 @@
+"""Dataset splitter module."""
+
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
@@ -28,8 +30,12 @@ def save_and_split_stratified(
     rare = df[df[stratify_by].isin(rare_classes)]
     common = df[~df[stratify_by].isin(rare_classes)]
 
-    train, temp = train_test_split(common, test_size=0.30, stratify=common[stratify_by], random_state=random_seed)
-    val, test = train_test_split(temp, test_size=0.50, stratify=temp[stratify_by], random_state=random_seed)
+    train, temp = train_test_split(
+        common, test_size=0.30, stratify=common[stratify_by], random_state=random_seed
+    )
+    val, test = train_test_split(
+        temp, test_size=0.50, stratify=temp[stratify_by], random_state=random_seed
+    )
 
     train = pd.concat([train, rare], ignore_index=True)
 
@@ -39,6 +45,7 @@ def save_and_split_stratified(
 
     print(f"Rare classes appended to train: {list(rare_classes)}")
     print(f"Train: {len(train)}, Valid: {len(val)}, Test: {len(test)}")
+
 
 df = pd.read_csv("dataset/final_dataset.csv")
 

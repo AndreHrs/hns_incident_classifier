@@ -1,3 +1,5 @@
+"""Main training loop with early stopping and artifact saving."""
+
 import copy
 import time
 from datetime import datetime
@@ -14,16 +16,19 @@ from .utility import _safe_class_name, _serialise_value, _is_better
 
 
 #  MAIN TRAINING LOOP // ensures all control variables are consistent // compatible with Dataloader-based pipelines
-def train_model_loop(config):   # all top-level inputs stored in config dictionary, which is passed around to all functions that need it
-    """
-    Main training loop that manages the entire training process, including early stopping.
-    Args:
-        - config (dict): A configuration dictionary containing all necessary parameters and objects for training, such
-            as the model, dataloaders, optimizer, scheduler, criterion, number of epochs, device, patience for early stopping, etc.
-    Returns:
-        - run_summary (dict): A dictionary containing the training configuration, training history, best epoch, best metric value, best model state dict, and total training time.
-    """    
+def train_model_loop(
+    config,
+):  # all top-level inputs stored in config dictionary, which is passed around to all functions that need it
+    """Manage the entire training process, including early stopping.
 
+    Args:
+        config: Dictionary containing model, dataloaders, optimizer, scheduler,
+            criterion, epochs, device, patience, and all other training parameters.
+
+    Returns:
+        Dictionary containing training history, best epoch, best metric value,
+        best model state dict, and total training time.
+    """
     run_saver = RunSaver()
     training_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     save_dir = run_saver.create_directory(config, training_timestamp)
@@ -32,12 +37,13 @@ def train_model_loop(config):   # all top-level inputs stored in config dictiona
     best_metric_value = None
     best_epoch = None
     best_model_state_dict = None
-   
 
     print("=" * 120)
     print(f"Training the {config['model_type']} model")
     print(f"Run name: {config['run_name']}")
-    print(f"Best model tracked by: {config['best_metric']} ({config['best_metric_mode']})")
+    print(
+        f"Best model tracked by: {config['best_metric']} ({config['best_metric_mode']})"
+    )
     print("=" * 120)
 
     training_start_time = time.time()
@@ -52,7 +58,7 @@ def train_model_loop(config):   # all top-level inputs stored in config dictiona
             config["scheduler"].step()
 
         run_saver.history["epoch_time_sec"].append(time.time() - epoch_start_time)
-        
+
         run_saver.append_metrics("train", train_metrics)
         run_saver.append_metrics("val", val_metrics)
 
@@ -68,11 +74,13 @@ def train_model_loop(config):   # all top-level inputs stored in config dictiona
             f"| Val Acc: {val_metrics['accuracy'] * 100:.2f}% "
             f"| Val F1 Macro: {val_metrics['f1_macro']:.4f} "
             f"| Val F1 Weighted: {val_metrics['f1_weighted']:.4f} "
-            f"| Best {config["best_metric"]}: {current_metric_value:.4f} |"
+            f"| Best {config['best_metric']}: {current_metric_value:.4f} |"
         )
         print("-" * 120)
 
-        if _is_better(current_metric_value, best_metric_value, config["best_metric_mode"]):
+        if _is_better(
+            current_metric_value, best_metric_value, config["best_metric_mode"]
+        ):
             best_metric_value = current_metric_value
             best_epoch = epoch
             patience_counter = 0
@@ -99,9 +107,11 @@ def train_model_loop(config):   # all top-level inputs stored in config dictiona
     }
 
     if config["save"] and best_model_state_dict is not None:
-        model_path, summary_path = run_saver.save_artifacts(config, run_summary, save_dir)
+        model_path, summary_path = run_saver.save_artifacts(
+            config, run_summary, save_dir
+        )
         run_saver.plot_history(best_epoch, save_dir, config["save_name"])
-        
+
         print(f"Run saved to: {save_dir}")
         print(f"Total training time: {total_train_time:.4f}s")
         print(f"Best epoch: {best_epoch}")

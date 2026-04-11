@@ -16,6 +16,7 @@ from modules.pre_processing.contraction_handler import (
 
 # ── Contraction handler ──────────────────────────────────────────────────────
 
+
 class TestContractionHandler:
     def test_expands_simple_contraction(self):
         result = handle_contraction("I'm fine")
@@ -41,6 +42,7 @@ class TestContractionHandler:
 
 
 # ── _basic_text_cleanup ──────────────────────────────────────────────────────
+
 
 class TestBasicTextCleanup:
     @pytest.fixture
@@ -74,6 +76,7 @@ class TestBasicTextCleanup:
 
 
 # ── _expand_domain_terms ─────────────────────────────────────────────────────
+
 
 class TestExpandDomainTerms:
     @pytest.fixture
@@ -118,6 +121,7 @@ class TestExpandDomainTerms:
 
 
 # ── pre_process_df — no lemmatize ────────────────────────────────────────────
+
 
 class TestPreProcessDfNoLemmatize:
     """Tests that do not require spaCy."""
@@ -197,6 +201,7 @@ class TestPreProcessDfNoLemmatize:
 
 
 # ── LemmaHandler via OneTextPreProcessor (requires spaCy en_core_web_sm) ─────
+
 
 class TestLemmaHandlerViaPipeline:
     """
