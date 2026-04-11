@@ -1,3 +1,5 @@
+"""Training loop module for evaluation."""
+
 import torch
 import torch.nn.functional as F
 from pathlib import Path
@@ -10,8 +12,8 @@ FATAL_CLASSES = ["Single Fatality", "Multiple Fatality"]
 
 
 def evaluate(config):
-    """
-    Evaluation function for evaluating the model on the test set.
+    """Evaluation function for evaluating the model on the test set.
+    
     Extends the validation function with additional evaluation metrics
     based on project success criteria.
 
