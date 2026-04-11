@@ -22,6 +22,7 @@ from modules.training_loop.utility import (
     _unpack_batch,
     _get_learning_rates,
 )
+
 # Import directly from the submodule to avoid pulling in run_saving (matplotlib)
 # via modules/training_loop/__init__.py
 from modules.training_loop.metrics import _compute_classification_metrics
@@ -29,33 +30,40 @@ from modules.training_loop.metrics import _compute_classification_metrics
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _make_model(seq_len=8, out_features=3, use_length=False):
     """Minimal linear model compatible with _unpack_batch.
     Expects D of shape (batch, seq_len) and returns logits of shape (batch, out_features).
     """
     if use_length:
+
         class _WithLength(nn.Module):
             def __init__(self):
                 super().__init__()
                 self.fc = nn.Linear(seq_len, out_features)
+
             def forward(self, x, lengths):
                 return self.fc(x.float())
+
         return _WithLength()
     else:
+
         class _NoLength(nn.Module):
             def __init__(self):
                 super().__init__()
                 self.fc = nn.Linear(seq_len, out_features)
+
             def forward(self, x):
                 return self.fc(x.float())
+
         return _NoLength()
 
 
 def _make_batch(batch_size=4, seq_len=8):
-    D      = torch.randint(0, 100, (batch_size, seq_len))
-    DL     = torch.tensor([seq_len] * batch_size)
+    D = torch.randint(0, 100, (batch_size, seq_len))
+    DL = torch.tensor([seq_len] * batch_size)
     Energy = torch.randint(0, 3, (batch_size,))
-    Risk   = torch.randint(0, 2, (batch_size,))
+    Risk = torch.randint(0, 2, (batch_size,))
     return D, DL, Energy, Risk
 
 
@@ -69,6 +77,7 @@ def _make_config(model, need_length=False, energy_model=False):
 
 
 # ── _is_better ────────────────────────────────────────────────────────────────
+
 
 class TestIsBetter:
     def test_none_best_always_true(self):
@@ -94,13 +103,14 @@ class TestIsBetter:
 
 # ── _serialise_value ──────────────────────────────────────────────────────────
 
+
 class TestSerialiseValue:
     def test_primitives_pass_through(self):
-        assert _serialise_value(1)     == 1
-        assert _serialise_value(1.5)   == 1.5
+        assert _serialise_value(1) == 1
+        assert _serialise_value(1.5) == 1.5
         assert _serialise_value("foo") == "foo"
-        assert _serialise_value(True)  is True
-        assert _serialise_value(None)  is None
+        assert _serialise_value(True) is True
+        assert _serialise_value(None) is None
 
     def test_list_recursed(self):
         assert _serialise_value([1, 2, 3]) == [1, 2, 3]
@@ -115,12 +125,15 @@ class TestSerialiseValue:
         assert result == pytest.approx([1.0, 2.0, 3.0])
 
     def test_unknown_type_becomes_repr(self):
-        class Foo: pass
+        class Foo:
+            pass
+
         result = _serialise_value(Foo())
         assert isinstance(result, str)
 
 
 # ── _compute_classification_metrics ──────────────────────────────────────────
+
 
 class TestComputeClassificationMetrics:
     def test_perfect_predictions(self):
@@ -138,8 +151,15 @@ class TestComputeClassificationMetrics:
     def test_returns_expected_keys(self):
         y = torch.tensor([0, 1])
         metrics = _compute_classification_metrics(y, y)
-        expected = {"accuracy", "precision_macro", "recall_macro", "f1_macro",
-                    "precision_weighted", "recall_weighted", "f1_weighted"}
+        expected = {
+            "accuracy",
+            "precision_macro",
+            "recall_macro",
+            "f1_macro",
+            "precision_weighted",
+            "recall_weighted",
+            "f1_weighted",
+        }
         assert set(metrics.keys()) == expected
 
     def test_empty_input_returns_zeros(self):
@@ -148,11 +168,12 @@ class TestComputeClassificationMetrics:
 
     def test_infers_num_classes(self):
         y = torch.tensor([0, 1, 2])
-        metrics = _compute_classification_metrics(y, y)   # num_classes not passed
+        metrics = _compute_classification_metrics(y, y)  # num_classes not passed
         assert metrics["accuracy"] == pytest.approx(1.0, abs=1e-5)
 
 
 # ── _unpack_batch ─────────────────────────────────────────────────────────────
+
 
 class TestUnpackBatch:
     def test_without_length_returns_logits_and_risk(self):
@@ -161,7 +182,7 @@ class TestUnpackBatch:
         batch = _make_batch()
         logits, targets = _unpack_batch(batch, config)
         assert logits.shape == (4, 3)
-        assert torch.equal(targets, batch[3])   # Risk
+        assert torch.equal(targets, batch[3])  # Risk
 
     def test_with_length_passes_dl_to_model(self):
         model = _make_model(use_length=True)
@@ -175,10 +196,11 @@ class TestUnpackBatch:
         config = _make_config(model, need_length=False, energy_model=True)
         batch = _make_batch()
         _, targets = _unpack_batch(batch, config)
-        assert torch.equal(targets, batch[2])   # Energy
+        assert torch.equal(targets, batch[2])  # Energy
 
 
 # ── _get_learning_rates ───────────────────────────────────────────────────────
+
 
 class TestGetLearningRates:
     def test_returns_list_of_lrs(self):
@@ -191,9 +213,11 @@ class TestGetLearningRates:
 
     def test_multiple_param_groups(self):
         model = _make_model()
-        opt = optim.SGD([
-            {"params": model.parameters(), "lr": 0.01},
-        ])
+        opt = optim.SGD(
+            [
+                {"params": model.parameters(), "lr": 0.01},
+            ]
+        )
         config = {"optimiser": opt}
         lrs = _get_learning_rates(config)
         assert len(lrs) == 1

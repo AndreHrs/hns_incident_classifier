@@ -1,11 +1,11 @@
+"""File download utilities for Google Drive and HTTP(S) sources."""
+
 import os
 from typing import Dict
 
 
 def _download_gdrive(url: str, out_path: str) -> None:
-    """
-    Download a Google Drive file using gdown.
-    """
+    """Download a Google Drive file using gdown."""
     try:
         import gdown
     except ImportError as e:
@@ -23,15 +23,12 @@ def _download_gdrive(url: str, out_path: str) -> None:
 
 
 def _download_http(url: str, out_path: str, timeout: int = 60) -> None:
-    """
-    Download a normal HTTP(S) file.
-    """
+    """Download a normal HTTP(S) file."""
     try:
         import requests
     except ImportError as e:
         raise ImportError(
-            "HTTP downloads require `requests`.\n"
-            "Install it with: pip install requests"
+            "HTTP downloads require `requests`.\nInstall it with: pip install requests"
         ) from e
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
@@ -55,8 +52,7 @@ def download_files(
     *,
     overwrite: bool = False,
 ) -> None:
-    """
-    Ensure required files exist locally and download missing ones.
+    """Ensure required files exist locally and download missing ones.
 
     Parameters
     ----------
@@ -67,7 +63,6 @@ def download_files(
     overwrite:
         If True, re-download even if file exists (must be keyword argument, cannot be positional)
     """
-
     os.makedirs(data_directory, exist_ok=True)
 
     missing = {}
@@ -101,8 +96,9 @@ def download_files(
 
     print("All missing file(s) downloaded.")
 
+
 ### Example Usage
-'''
+"""
 from modules.misc.file_downloader import download_files
 
 needed_files = {
@@ -111,4 +107,4 @@ needed_files = {
 }
 
 download_files(needed_files = needed_files, data_directory="data/dataset", overwrite=False)
-'''
+"""

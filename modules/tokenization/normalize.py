@@ -1,4 +1,17 @@
-from .patterns import _DOT_TIME_RANGE_LEAD_RE, _DOT_TIME_RE ,_DOT_HOUR_RE ,_SPACE_HRS_RE ,_BARE_HHMM_HRS_RE ,_ORDINAL_RE, _DAY_NUM_RE, _MONTHS, _YEAR_RE
+"""Token normalization and natural-language date collapsing utilities."""
+
+from .patterns import (
+    _DOT_TIME_RANGE_LEAD_RE,
+    _DOT_TIME_RE,
+    _DOT_HOUR_RE,
+    _SPACE_HRS_RE,
+    _BARE_HHMM_HRS_RE,
+    _ORDINAL_RE,
+    _DAY_NUM_RE,
+    _MONTHS,
+    _YEAR_RE,
+)
+
 
 def _normalise_time_formats(text: str) -> str:
     """Normalise informal time variants to canonical colon form before tokenization.
@@ -19,12 +32,13 @@ def _normalise_time_formats(text: str) -> str:
     :returns: Text with time variants rewritten to the canonical colon form.
     :rtype: str
     """
-    text = _DOT_TIME_RANGE_LEAD_RE.sub(r'\1:\2 - ', text)
-    text = _DOT_TIME_RE.sub(r'\1:\2\3', text)
-    text = _DOT_HOUR_RE.sub(r'\1:\2\3', text)
-    text = _SPACE_HRS_RE.sub(r'\1\2', text)
-    text = _BARE_HHMM_HRS_RE.sub(r'\1\2', text)
+    text = _DOT_TIME_RANGE_LEAD_RE.sub(r"\1:\2 - ", text)
+    text = _DOT_TIME_RE.sub(r"\1:\2\3", text)
+    text = _DOT_HOUR_RE.sub(r"\1:\2\3", text)
+    text = _SPACE_HRS_RE.sub(r"\1\2", text)
+    text = _BARE_HHMM_HRS_RE.sub(r"\1\2", text)
     return text
+
 
 def _collapse_natural_dates(tokens: list[str]) -> list[str]:
     """Collapse three-token natural-language dates into a single ``<date>`` placeholder.
@@ -55,17 +69,21 @@ def _collapse_natural_dates(tokens: list[str]) -> list[str]:
         if i + 2 < len(tokens):
             t0, t1, t2 = tokens[i], tokens[i + 1], tokens[i + 2]
             # day-first: "9th January 2018" or "9 January 2018"
-            if (_ORDINAL_RE.match(t0) or _DAY_NUM_RE.match(t0)) \
-                    and t1.lower() in _MONTHS \
-                    and _YEAR_RE.match(t2):
-                result.append('<date>')
+            if (
+                (_ORDINAL_RE.match(t0) or _DAY_NUM_RE.match(t0))
+                and t1.lower() in _MONTHS
+                and _YEAR_RE.match(t2)
+            ):
+                result.append("<date>")
                 i += 3
                 continue
             # month-first: "January 9th 2018" or "January 9 2018"
-            if t0.lower() in _MONTHS \
-                    and (_ORDINAL_RE.match(t1) or _DAY_NUM_RE.match(t1)) \
-                    and _YEAR_RE.match(t2):
-                result.append('<date>')
+            if (
+                t0.lower() in _MONTHS
+                and (_ORDINAL_RE.match(t1) or _DAY_NUM_RE.match(t1))
+                and _YEAR_RE.match(t2)
+            ):
+                result.append("<date>")
                 i += 3
                 continue
         result.append(tokens[i])

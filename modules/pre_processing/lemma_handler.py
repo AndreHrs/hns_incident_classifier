@@ -1,3 +1,5 @@
+"""spaCy-based lemmatization handler for the pre-processing pipeline."""
+
 import spacy
 
 spacy.prefer_gpu()
@@ -47,6 +49,7 @@ class LemmaHandler:
     """
 
     def __init__(self, config: dict) -> None:
+        """Initialize the lemmatizer with the given configuration."""
         model: str = config.get("spacy_model", "en_core_web_trf")
         self.use_ner: bool = config.get("use_ner", True)
         self.filter_stop_words: bool = config.get("filter_stop_words", False)
@@ -112,7 +115,10 @@ class LemmaHandler:
             lemma = token.lemma_
 
             # Short-token filter
-            if self.short_tokens_threshold > 0 and len(lemma) < self.short_tokens_threshold:
+            if (
+                self.short_tokens_threshold > 0
+                and len(lemma) < self.short_tokens_threshold
+            ):
                 i += 1
                 continue
 

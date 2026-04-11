@@ -1,3 +1,5 @@
+"""Single-epoch training loop for the main training pipeline."""
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -6,13 +8,12 @@ from .utility import _unpack_batch, _get_learning_rates
 from .metrics import _compute_classification_metrics
 
 
-
 # SINGLE EPOCH TRAINING LOOP // returning training accuracy and loss of one training epoch
 def train_one_epoch(config):
-    """
-    Train the model for one epoch.
+    """Train the model for one epoch.
+
     Args:
-        - config: A dictionary containing the following keys:
+        config: A dictionary containing the following keys:
             - model: The PyTorch model to train.
             - optimiser: The optimizer to use for training.
             - scheduler: The learning rate scheduler to use (optional).
@@ -20,11 +21,11 @@ def train_one_epoch(config):
             - train_dl: The DataLoader for the training data.
             - num_classes: The number of classes in the classification task.
             - clip_grad_max_norm: The maximum norm for gradient clipping (optional).
-    Returns:
-        - metrics (dict): A dictionary containing the calculated validation metrics, listed below, and the current learning rate:
-            - accuracy, precision, recall, f1 macro, precision weighted, recall weighted, f1 weighted, loss
-    """
 
+    Returns:
+        Dictionary of training metrics: accuracy, precision, recall, f1 macro,
+        precision weighted, recall weighted, f1 weighted, loss, and lr.
+    """
     model = config["model"]
     optimiser = config["optimiser"]
     scheduler = config["scheduler"]
@@ -43,7 +44,9 @@ def train_one_epoch(config):
         loss.backward()
 
         if config["clip_grad_max_norm"] is not None:
-            torch.nn.utils.clip_grad_norm_(model.parameters(), config["clip_grad_max_norm"])
+            torch.nn.utils.clip_grad_norm_(
+                model.parameters(), config["clip_grad_max_norm"]
+            )
 
         optimiser.step()
 
@@ -64,8 +67,9 @@ def train_one_epoch(config):
     all_targets = torch.cat(all_targets) if all_targets else torch.tensor([])
 
     # Compute classification metrics
-    metrics = _compute_classification_metrics(y_true=all_targets, y_pred=all_preds, 
-                                              num_classes=config["num_classes"])
+    metrics = _compute_classification_metrics(
+        y_true=all_targets, y_pred=all_preds, num_classes=config["num_classes"]
+    )
     metrics["loss"] = avg_loss
     metrics["lr"] = _get_learning_rates(config)
 

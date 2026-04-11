@@ -1,3 +1,5 @@
+"""Token vocabulary construction and id mapping for sequence models."""
+
 from collections import Counter
 from typing import Iterable
 
@@ -26,6 +28,7 @@ class VocabEncoder:
     UNK_TOKEN = "<unk>"
 
     def __init__(self, min_freq: int = 1, max_vocab_size: int | None = None):
+        """Initialize with frequency and size limits; vocabulary is filled in ``fit``."""
         if min_freq < 1:
             raise ValueError("min_freq must be >= 1")
 

@@ -1,3 +1,5 @@
+"""DataLoader construction utilities for the training pipeline."""
+
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
@@ -12,8 +14,7 @@ def df_to_dataloader(
     pad_id: int = 0,
     shuffle: bool = True,
 ):
-    """
-    Convert a preprocessed DataFrame into a DataLoader compatible with _unpack_batch.
+    """Convert a preprocessed DataFrame into a DataLoader compatible with _unpack_batch.
 
     Each batch yields: (D, DL, Energy, Risk)
         - D      : padded token-id tensor         (batch, max_seq_len)  long
@@ -37,12 +38,12 @@ def df_to_dataloader(
         DataLoader yielding (D, DL, Energy, Risk) batches.
     """
     sequences = [torch.tensor(seq, dtype=torch.long) for seq in df[tokens_col]]
-    lengths   = torch.tensor([len(s) for s in sequences], dtype=torch.long)
+    lengths = torch.tensor([len(s) for s in sequences], dtype=torch.long)
 
     D = pad_sequence(sequences, batch_first=True, padding_value=pad_id)
 
     Energy = torch.tensor(df[energy_col].to_numpy(), dtype=torch.long)
-    Risk   = torch.tensor(df[risk_col].to_numpy(),   dtype=torch.long)
+    Risk = torch.tensor(df[risk_col].to_numpy(), dtype=torch.long)
 
     dataset = TensorDataset(D, lengths, Energy, Risk)
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)

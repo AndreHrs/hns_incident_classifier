@@ -1,3 +1,5 @@
+"""Validation loop for model evaluation during training."""
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -8,21 +10,22 @@ from .metrics import _compute_classification_metrics
 
 # VALIDATION FUNCTION // Evaluation funciton used for validation
 def validate(config):
-    """
-    Validation function for evaluating the model on the validation set.
-    Args:        
-        - config (dict): A configuration dictionary containing the following keys:
+    """Validate the model on the validation set.
+
+    Args:
+        config (dict): A configuration dictionary containing the following keys:
             - model: The model to be evaluated.
             - valid_dl: The validation dataloader.
-            - criterion: The loss function to be used for evaluation.
-            - device: The device to run the evaluation on (e.g., 'cpu' or 'cuda').
-            - num_classes: The number of classes in the classification task.
-            - compute_val_metrics: Whether to compute detailed metrics (e.g., precision, recall, F1) in addition to loss and accuracy.
-    Returns:
-        - metrics (dict): A dictionary containing the calculated validation metrics, including:
-            - accuracy, precision, recall, f1 macro, precision weighted, recall weighted, f1 weighted, loss
-    """
+            - criterion: The loss function for evaluation.
+            - device: The device to run on (e.g., 'cpu' or 'cuda').
+            - num_classes: Number of classes in the classification task.
+            - compute_val_metrics: Whether to compute detailed metrics
+            (precision, recall, F1) beyond loss and accuracy.
 
+    Returns:
+        dict: Validation metrics including accuracy, precision, recall,
+            F1 macro, precision weighted, recall weighted, F1 weighted, and loss.
+    """
     model = config["model"]
     criterion = config["criterion"]
 

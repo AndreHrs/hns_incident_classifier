@@ -1,3 +1,5 @@
+"""Embedding backends and shared output types for sequence models."""
+
 from .base import BaseEmbeddingBackend
 from .embedding_output import EmbeddingOutput
 

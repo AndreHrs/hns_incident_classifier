@@ -1,7 +1,5 @@
-import torch
+"""Utility functions for the training loop.
 
-"""
-UTILITY FUNCTIONS FOR TRAINING LOOP
 Includes:
     _safe_class_name: 
             Safely get the class name of an object, returning None if the object is None
@@ -15,6 +13,7 @@ Includes:
             Compare the current metric value to the best metric value based on the specified mode (min or max)
 """
 
+import torch
 
 # GET CLASS NAME // Safely get the class name of an object, returning None if the object is None
 def _safe_class_name(obj):
@@ -23,8 +22,8 @@ def _safe_class_name(obj):
 
 # CONVERT METRICS TO SERIALISABLE FORMAT // Convert various types of values (including tensors) to a format that can be easily saved in JSON or similar formats
 def _serialise_value(value):
-    """
-    Best-effort conversion for config/checkpoint metadata.
+    """Best-effort conversion for config/checkpoint metadata.
+
     Keeps tensors/modules/optimisers from breaking JSON-style storage.
     """
     if isinstance(value, (str, int, float, bool, type(None))):
@@ -40,10 +39,10 @@ def _serialise_value(value):
 
 # DATALOADER BATCH UNPACKING // unpack batches from the dataloader and prepare them for model input.
 def _unpack_batch(batch, config):
-    """
-    Assumes the same batch structure as your current code:
-      - with length:  D, DL, Energy, Risk
-      - without length: D, _, Energy, Risk
+    """Unpack a dataloader batch and move tensors to the configured device.
+
+    Assumes batch structure: (D, DL, Energy, Risk) with length, or
+    (D, _, Energy, Risk) without length.
     """
     device = config["device"]
     need_length = config["need_length"]
@@ -69,31 +68,34 @@ def _unpack_batch(batch, config):
 
 # GET OPTIMISER LEARNING RATES // Get the learning rates from the optimizer's parameter groups
 def _get_learning_rates(config):
-    """
-    Args:
-        - config: A dictionary containing the training configuration, which must include the 'optimiser'
-    Returns:
-        - list: A list of learning rates corresponding to each parameter group in the optimizer.
-    """
+    """Return the learning rate for each optimizer parameter group.
 
+    Args:
+        config: Training configuration dict containing the 'optimiser' key.
+
+    Returns:
+        List of learning rates, one per parameter group.
+    """
     optimiser = config["optimiser"]
-    
+
     return [group["lr"] for group in optimiser.param_groups]
 
 
 # BEST MODEL COMPARISON // Compare the current metric value to the best metric value based on the specified mode (min or max)
 def _is_better(current, best, mode):
-    """
+    """Return True if current metric is better than best according to mode.
+
     Args:
-        - current: The current metric value to compare.
-        - best: The best metric value seen so far (can be None if no best value has been set).
-        - mode: A string indicating whether a lower value is better ('min') or a higher value is better ('max').
+        current: The current metric value.
+        best: The best metric value so far, or None if not yet set.
+        mode: 'min' if lower is better, 'max' if higher is better.
+
     Returns:
-        - bool: True if the current value is better than the best value according to the specified mode, False otherwise.
+        True if current is better than best, False otherwise.
     """
     if best is None:
         return True
-    
+
     if mode not in {"min", "max"}:
         raise ValueError(f"Invalid mode: {mode}. Expected 'min' or 'max'.")
     else:

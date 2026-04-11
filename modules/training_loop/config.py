@@ -1,3 +1,5 @@
+"""Training configuration builder for the main training loop."""
+
 import time
 
 import torch
@@ -6,13 +8,33 @@ import torch.optim as optim
 
 from .utility import _safe_class_name
 
-# CONFIG AND UTILITY FUNCTIONS FOR TRAINING LOOP
-def _build_train_config(model, train_dl, valid_dl, epochs, device, patience, criterion_weights, model_type="Simple", save=True, optimiser=None, scheduler=None, criterion=None,
-                  need_length=False, energy_model=False, best_metric="loss", best_metric_mode=None, clip_grad_max_norm=1.0, scheduler_step_per_batch=False,
-                  save_dir="trained_models", run_name=None, num_classes=None, extra_config=None,
-                 ):
-    """Build the training configuration dictionary.""" 
 
+# CONFIG AND UTILITY FUNCTIONS FOR TRAINING LOOP
+def _build_train_config(
+    model,
+    train_dl,
+    valid_dl,
+    epochs,
+    device,
+    patience,
+    criterion_weights,
+    model_type="Simple",
+    save=True,
+    optimiser=None,
+    scheduler=None,
+    criterion=None,
+    need_length=False,
+    energy_model=False,
+    best_metric="loss",
+    best_metric_mode=None,
+    clip_grad_max_norm=1.0,
+    scheduler_step_per_batch=False,
+    save_dir="trained_models",
+    run_name=None,
+    num_classes=None,
+    extra_config=None,
+):
+    """Build the training configuration dictionary."""
     # DEFAULT OPTIMISER, SCHEDULER, CRITERION // Set default optimiser, scheduler, and criterion if not provided
     if optimiser is None:
         optimiser = optim.Adam(model.parameters(), lr=1e-3)
@@ -25,7 +47,16 @@ def _build_train_config(model, train_dl, valid_dl, epochs, device, patience, cri
             criterion_weights = criterion_weights.to(device)
         criterion = nn.CrossEntropyLoss(weight=criterion_weights)
 
-    if best_metric not in {"loss", "accuracy", "precision_macro", "recall_macro", "f1_macro", "precision_weighted", "recall_weighted", "f1_weighted"}:
+    if best_metric not in {
+        "loss",
+        "accuracy",
+        "precision_macro",
+        "recall_macro",
+        "f1_macro",
+        "precision_weighted",
+        "recall_weighted",
+        "f1_weighted",
+    }:
         raise ValueError(
             f"Invalid best_metric: {best_metric}. Must be one of 'loss', 'accuracy', 'precision_macro', 'recall_macro', 'f1_macro', 'precision_weighted', 'recall_weighted', 'f1_weighted'."
         )

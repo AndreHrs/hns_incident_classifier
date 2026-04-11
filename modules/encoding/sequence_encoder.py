@@ -1,3 +1,5 @@
+"""Pad and truncate token-id sequences using a fitted vocabulary."""
+
 from typing import Iterable
 
 from .vocab_encoder import VocabEncoder
@@ -30,6 +32,7 @@ class SequenceEncoder:
         padding: str = "post",
         truncating: str = "post",
     ):
+        """Store vocabulary reference and fixed-length padding/truncation options."""
         if max_length <= 0:
             raise ValueError("max_length must be > 0")
         if padding not in {"post", "pre"}:
