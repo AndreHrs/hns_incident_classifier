@@ -3,6 +3,8 @@
 from .config import _build_train_config
 from .train_loop import train_model_loop
 
+__all__ = ["training", "_build_train_config", "train_model_loop"]
+
 """
 TRAINING LOOP MODULE // Files related to the main training loop and its components
 - config: 
@@ -65,8 +67,10 @@ def training(
     save_dir="trained_models",
     run_name=None,
     compute_train_metrics=False,
+    parameters=None,
     num_classes=None,
     extra_config=None,
+    **_,
 ):
     """Build training config and run the full training loop.
 
@@ -92,6 +96,7 @@ def training(
         save_dir: Directory to save model artifacts.
         run_name: Optional name for the run.
         compute_train_metrics: Whether to compute metrics on the training set.
+        parameters: The training parameters,
         num_classes: Number of output classes.
         extra_config: Optional dict of additional config keys to merge.
 
@@ -122,6 +127,7 @@ def training(
         save_dir=save_dir,
         run_name=run_name,
         compute_train_metrics=compute_train_metrics,
+        parameters=parameters,
         num_classes=num_classes,
         extra_config=extra_config,
     )
