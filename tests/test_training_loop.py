@@ -26,6 +26,7 @@ from modules.training_loop.utility import (
 # Import directly from the submodule to avoid pulling in run_saving (matplotlib)
 # via modules/training_loop/__init__.py
 from modules.training_loop.metrics import _compute_classification_metrics
+from modules.training_loop.loss import get_loss_function, FocalLoss
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -224,8 +225,6 @@ class TestGetLearningRates:
         assert lrs[0] == pytest.approx(0.01)
 
 # ── get_loss_function ─────────────────────────────────────────────────────────
-
-from modules.training_loop.loss import get_loss_function, FocalLoss
 
 
 class TestGetLossFunction:

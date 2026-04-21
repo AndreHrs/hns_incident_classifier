@@ -18,12 +18,14 @@ class FocalLoss(nn.Module):
     """
 
     def __init__(self, gamma=2.0, weight=None, reduction="mean"):
+        """Initialise FocalLoss with focusing parameter and optional class weights."""
         super().__init__()
         self.gamma = gamma
         self.weight = weight
         self.reduction = reduction
 
     def forward(self, logits, targets):
+        """Compute focal loss given logits and targets."""
         ce_loss = F.cross_entropy(logits, targets, weight=self.weight, reduction="none")
         pt = torch.exp(-ce_loss)
         focal_loss = (1 - pt) ** self.gamma * ce_loss

@@ -84,6 +84,7 @@ def training(
         save: Whether to save model artifacts after training.
         scheduler: Learning rate scheduler. Defaults to StepLR.
         criterion: Loss function. Defaults to CrossEntropyLoss.
+        criterion_type: Loss function type. One of 'cross_entropy', 'focal'. Defaults to 'cross_entropy'.
         need_length: Whether the model expects sequence lengths as input.
         energy_model: If True, predict energy type; otherwise predict risk.
         best_metric: Metric used to select the best model checkpoint.
