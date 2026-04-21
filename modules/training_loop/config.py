@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from .utility import _safe_class_name
+from .loss import get_loss_function
 
 
 # CONFIG AND UTILITY FUNCTIONS FOR TRAINING LOOP
@@ -23,6 +24,7 @@ def _build_train_config(
     optimiser=None,
     scheduler=None,
     criterion=None,
+    criterion_type="cross_entropy",
     need_length=False,
     energy_model=False,
     best_metric="loss",
@@ -45,7 +47,10 @@ def _build_train_config(
     if criterion is None:
         if criterion_weights is not None:
             criterion_weights = criterion_weights.to(device)
-        criterion = nn.CrossEntropyLoss(weight=criterion_weights)
+        criterion = get_loss_function(
+            criterion_type=criterion_type,
+            weight=criterion_weights,
+        )
 
     if best_metric not in {
         "loss",
@@ -80,6 +85,7 @@ def _build_train_config(
         "patience": patience,
         "criterion_weights": criterion_weights,
         "criterion": criterion,
+        "criterion_type": criterion_type,
         "optimiser": optimiser,
         "scheduler": scheduler,
         "model_type": model_type,

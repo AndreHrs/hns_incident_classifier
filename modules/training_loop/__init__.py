@@ -56,6 +56,7 @@ def training(
     save=True,
     scheduler=None,  # need to be defined outside
     criterion=None,  # need to be defined outside
+    criterion_type="cross_entropy",
     need_length=False,
     energy_model=False,
     best_metric="loss",  # must be in: "loss", "accuracy", "precision_macro", "recall_macro", "f1_macro", "precision_weighted", "recall_weighted", "f1_weighted"
@@ -113,6 +114,7 @@ def training(
         optimiser=optimiser,
         scheduler=scheduler,
         criterion=criterion,
+        criterion_type=criterion_type,
         need_length=need_length,
         energy_model=energy_model,
         best_metric=best_metric,
