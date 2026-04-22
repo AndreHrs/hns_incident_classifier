@@ -1,19 +1,19 @@
 """Training loop module for evaluation."""
 
-import torch
-import torch.nn.functional as F
-from pathlib import Path
 import json
+import torch
+from pathlib import Path
 
 from .metrics import _compute_classification_metrics
 from .utility import _unpack_batch
+from modules.inference import run_inference
 
 FATAL_CLASSES = ["Single Fatality", "Multiple Fatality"]
 
 
 def evaluate(config):
     """Evaluation function for evaluating the model on the test set.
-    
+
     Extends the validation function with additional evaluation metrics
     based on project success criteria.
 
@@ -40,43 +40,28 @@ def evaluate(config):
             - fatal_flag_count: number of fatal predictions flagged
             - fatal_flag_rate: proportion of fatal predictions flagged
     """
-    model = config["model"]
     criterion = config["criterion"]
     class_names = config.get("class_names", [])
     threshold = config.get("threshold", 0.80)
-    temperature = config.get("temperature", 1.0)
-    use_temperature = config.get("use_temperature", False)
     save_dir = config.get("save_dir", None)
 
-    model.eval()
-    total_loss, total_examples = 0.0, 0
-    all_preds, all_targets, all_probs = [], [], []
+    inference_result = run_inference(config)
+    if inference_result is None:
+        return {}
 
+    all_preds = inference_result["all_preds"]
+    all_targets = inference_result["all_targets"]
+    all_probs = inference_result["all_probs"]
+    total_examples = inference_result["total_examples"]
+
+    # Recompute loss over test set (run_inference doesn't track loss)
+    total_loss = 0.0
     with torch.no_grad():
         for batch in config["test_dl"]:
             logits, targets = _unpack_batch(batch, config)
             loss = criterion(logits, targets)
-
-            # Apply temperature scaling or standard softmax
-            if use_temperature:
-                scaled = logits / temperature
-                probs = F.softmax(scaled, dim=1)
-            else:
-                probs = F.softmax(logits, dim=1)
-
-            preds = probs.argmax(dim=1)
-
-            batch_size = targets.size(0)
-            total_loss += loss.item() * batch_size
-            total_examples += batch_size
-            all_preds.append(preds.detach().cpu())
-            all_targets.append(targets.detach().cpu())
-            all_probs.append(probs.detach().cpu())
-
+            total_loss += loss.item() * targets.size(0)
     avg_loss = total_loss / max(total_examples, 1)
-    all_preds = torch.cat(all_preds) if all_preds else torch.tensor([])
-    all_targets = torch.cat(all_targets) if all_targets else torch.tensor([])
-    all_probs = torch.cat(all_probs) if all_probs else torch.tensor([])
 
     # Compute base classification metrics from metrics.py
     metrics = _compute_classification_metrics(
