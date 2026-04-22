@@ -160,12 +160,18 @@ class TestComputeClassificationMetrics:
             "precision_weighted",
             "recall_weighted",
             "f1_weighted",
+            "f1_per_class",
+            "confusion_matrix",
         }
         assert set(metrics.keys()) == expected
 
     def test_empty_input_returns_zeros(self):
         metrics = _compute_classification_metrics(torch.tensor([]), torch.tensor([]))
-        assert all(v == 0.0 for v in metrics.values())
+        numeric_keys = ["accuracy", "precision_macro", "recall_macro", "f1_macro",
+                    "precision_weighted", "recall_weighted", "f1_weighted"]
+        assert all(metrics[k] == 0.0 for k in numeric_keys)
+        assert metrics["f1_per_class"] == []
+        assert metrics["confusion_matrix"] == []
 
     def test_infers_num_classes(self):
         y = torch.tensor([0, 1, 2])
