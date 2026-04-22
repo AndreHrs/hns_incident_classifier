@@ -16,7 +16,8 @@ def _compute_classification_metrics(y_true, y_pred, num_classes=None):
         num_classes: The number of classes. Inferred from data if None.
 
     Returns:
-        metrics Dictionary containing accuracy, precision/recall/f1 macro and weighted.
+        metrics Dictionary containing accuracy, precision/recall/f1 macro and weighted,
+        f1 per class, and confusion matrix.
 
     Notes:
         Class labels must be integer-encoded from 0 to num_classes-1.
@@ -34,6 +35,8 @@ def _compute_classification_metrics(y_true, y_pred, num_classes=None):
             "precision_weighted": 0.0,
             "recall_weighted": 0.0,
             "f1_weighted": 0.0,
+            "f1_per_class": [],      # empty list when no samples
+            "confusion_matrix": [],  # empty list when no samples
         }
 
     if num_classes is None:
@@ -69,6 +72,8 @@ def _compute_classification_metrics(y_true, y_pred, num_classes=None):
         "precision_weighted": (precision_per_class * weights).sum().item(),
         "recall_weighted": (recall_per_class * weights).sum().item(),
         "f1_weighted": (f1_per_class * weights).sum().item(),
+        "f1_per_class": f1_per_class.tolist(),
+        "confusion_matrix": cm.long().tolist(),
     }
 
     return metrics
