@@ -86,52 +86,42 @@ def training(
     """Build training config and run the full training loop.
 
     Args:
-        Model type specifics - 
-            model:          PyTorch model to train.
-            energy_model:   True = predict energy type; False = predict risk type.
-            model_type:     Label used for saving and logging.
-            need_length:    Whether the model expects sequence lengths as input.
+        model:          PyTorch model to train.
+        energy_model:   True = predict energy type; False = predict risk type.
+        model_type:     Label used for saving and logging.
+        need_length:    Whether the model expects sequence lengths as input.
 
-        Optimiser specifics - 
-            optimiser:  Optimizer instance. Defaults to Adam with lr=1e-3.
-            optimiser_args: Dictionary of additional arguments for the optimizer.
+        optimiser:  Optimizer instance. Defaults to Adam with lr=1e-3.
+        optimiser_args: Dictionary of additional arguments for the optimizer.
 
-        Scheduler specifics -
-            scheduler:                  Learning rate scheduler. Defaults to StepLR.
-            scheduler_step_per_batch:   Step scheduler per batch instead of per epoch.
+        scheduler:                  Learning rate scheduler. Defaults to StepLR.
+        scheduler_step_per_batch:   Step scheduler per batch instead of per epoch.
 
-        Loss function specifics -
-            criterion_type:     Loss function type. One of 'cross_entropy', 'focal'. Defaults to 'cross_entropy'.
-            criterion_weights:  Optional class weights for the loss function.
-            criterion_args:     Dictionary of additional arguments for the loss function.
+        criterion_type:     Loss function type. One of 'cross_entropy', 'focal'. Defaults to 'cross_entropy'.
+        criterion_weights:  Optional class weights for the loss function.
+        criterion_args:     Dictionary of additional arguments for the loss function.
 
-        Dataloaders -
-            train_dl:  DataLoader for training data.
-            valid_dl:  DataLoader for validation data.
-            test_dl:   DataLoader for test data.
+        train_dl:  DataLoader for training data.
+        valid_dl:  DataLoader for validation data.
+        test_dl:   DataLoader for test data.
 
-        Training control -
-            epochs:       Number of training epochs.
-            patience:     Early stopping patience in epochs.
-            num_classes:  Number of output classes.
-            clip_grad_max_norm:  Max norm for gradient clipping.
+        epochs:       Number of training epochs.
+        patience:     Early stopping patience in epochs.
+        num_classes:  Number of output classes.
+        clip_grad_max_norm:  Max norm for gradient clipping.
 
-        Best model tracking -
-            best_metric:         Metric used to select the best model checkpoint.
-            best_metric_mode:    Towards 'min' or 'max' // Inferred from best_metric if None.
+        best_metric:         Metric used to select the best model checkpoint.
+        best_metric_mode:    Towards 'min' or 'max' // Inferred from best_metric if None.
 
-        Other parameters -
-            parameters:  The training parameters in a dictionary format.
-            device:      Device string, e.g. 'cpu' or 'cuda'.
+        parameters:  The training parameters in a dictionary format.
+        device:      Device string, e.g. 'cpu' or 'cuda'.
 
-        Saving and logging -
-            compute_train_metrics:  Whether to compute metrics on the training set.
-            save:                   Whether to save model artifacts after training.
-            parent_dir:             Directory to save model artifacts.
-            run_name:               Optional name for the run.
-
-        Extra arguments -
-            extra_config:  Optional dict of additional config keys to merge.
+        compute_train_metrics:  Whether to compute metrics on the training set.
+        save:                   Whether to save model artifacts after training.
+        parent_dir:             Directory to save model artifacts.
+        run_name:               Optional name for the run.
+            
+        extra_config:  Optional dict of additional config keys to merge.
 
     Returns:
         Run summary dictionary with history, best epoch, and best metric value.

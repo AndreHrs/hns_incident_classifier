@@ -1,7 +1,8 @@
 """Configurable loss functions for training.
-    Currently supports:
-        - CrossEntropyLoss  (with optional class weights)
-        - FocalLoss         (with optional class weights, gamma parameter and reduction method)
+
+Currently supports:
+- CrossEntropyLoss  (with optional class weights).
+- FocalLoss         (with optional class weights, gamma parameter and reduction method).
 """
 
 import torch
