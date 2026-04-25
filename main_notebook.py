@@ -93,7 +93,7 @@ train_dl = build_tfidf_dataloader(train_vecs, train_labels)
 val_dl   = build_tfidf_dataloader(val_vecs, val_labels, shuffle=False)
 
 num_classes = label_enc.num_classes
-model = TFIDFClassifier(vocab_size=len(vectorizer.vocab), num_classes=num_classes)
+model = TFIDFClassifier(vocab_size=len(vectorizer.vocab), num_classes=num_classes, hidden_dim=256)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model = model.to(device)
 
@@ -158,6 +158,27 @@ plt.tight_layout()
 plt.savefig("confusion_matrix.png", dpi=150)
 
 # %%
+import pandas as pd
+
+true_class = "Susceptible Part"
+pred_class = "Specialized Shape"
+
+true_idx = label_enc.encode(true_class)
+pred_idx = label_enc.encode(pred_class)
+
+mask = (val_labels == true_idx) & (preds == pred_idx)
+misclassified_indices = mask.nonzero()[0]
+
+text_col = column_map["Detailed Description of Event"]
+misclassified_texts = model1_valid.iloc[misclassified_indices][[text_col, "energy_type"]].copy()
+misclassified_texts["predicted"] = pred_class
+
+print(f"Found {len(misclassified_indices)} sample(s) labelled '{true_class}' but predicted as '{pred_class}':\n")
+pd.set_option("display.max_colwidth", None)
+misclassified_texts.reset_index(drop=True)
+
+
+# %%
 model1_valid.columns
 
 # %%
@@ -173,28 +194,26 @@ compare.to_csv("debugging.csv")
 
 # %%
 import pandas as pd
-import torch
-import numpy as np
+from modules.inference import run_inference
 
-# Get predictions with references
-model.eval()
-all_preds, all_true, all_refs = [], [], []
+# Run inference on the validation set
+infer_config = {
+    "model": model,
+    "device": device,
+    "need_length": False,
+    "energy_model": True,
+    "test_dl": val_dl,
+}
+infer_result = run_inference(infer_config)
 
-with torch.no_grad():
-    for i, batch in enumerate(valid_dl):
-        D, _, Energy, Risk = batch
-        D = D.to(device)
-        logits = model(D)
-        preds = logits.argmax(dim=1).cpu().numpy()
-        all_preds.extend(preds)
-        all_true.extend(Energy.numpy())
+all_preds = infer_result["all_preds"].numpy()
+all_true  = infer_result["all_targets"].numpy()
 
 # Decode labels
 pred_labels = label_enc.decode_many(all_preds)
 true_labels = label_enc.decode_many(all_true)
 
-# Build results df — we need to align with model1_valid by position
-# valid_dl was built without shuffling, so order is preserved
+# Build results df — valid_dl was built without shuffling, so order is preserved
 results_df = model1_valid.copy().reset_index(drop=True)
 results_df['pred_label'] = pred_labels
 results_df['true_label'] = true_labels
@@ -225,6 +244,42 @@ for true_cls, pred_cls in review_pairs:
     if subset.empty:
         continue
 
+valid_df = model1_valid.copy().reset_index(drop=True)
+valid_df["pred_label"] = pred_labels
+valid_df["true_label"] = true_labels
+valid_df["correct"]    = valid_df["pred_label"] == valid_df["true_label"]
+
+print(f"Test accuracy : {valid_df['correct'].mean():.3f}  ({valid_df['correct'].sum()}/{len(valid_df)})")
+valid_df.head(3)
+
+
+
+# %%
+# ── Inference on test set ─────────────────────────────────────────────────
+test_tokenized_docs = model1_test[tokens_col].tolist()
+test_labels_enc     = torch.tensor(label_enc.encode_many(model1_test[label_col].tolist()))
+test_vecs           = vectorizer.transform(test_tokenized_docs)
+test_dl             = build_tfidf_dataloader(test_vecs, test_labels_enc, shuffle=False)
+
+test_infer_config = {
+    "model": model,
+    "device": device,
+    "need_length": False,
+    "energy_model": True,
+    "test_dl": test_dl,
+}
+test_result = run_inference(test_infer_config)
+
+test_pred_labels = label_enc.decode_many(test_result["all_preds"].numpy())
+test_true_labels = label_enc.decode_many(test_result["all_targets"].numpy())
+
+test_df = model1_test.copy().reset_index(drop=True)
+test_df["pred_label"] = test_pred_labels
+test_df["true_label"] = test_true_labels
+test_df["correct"]    = test_df["pred_label"] == test_df["true_label"]
+
+print(f"Test accuracy : {test_df['correct'].mean():.3f}  ({test_df['correct'].sum()}/{len(test_df)})")
+test_df.head(3)
 
 
 # %%
