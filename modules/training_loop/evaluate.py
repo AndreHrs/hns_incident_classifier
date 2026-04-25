@@ -39,8 +39,9 @@ def evaluate(config):
             - loss
             - auto_classification_rate: proportion of predictions above threshold
             - meets_requirement: whether auto_classification_rate >= 0.70
-            - fatal_flag_count: number of fatal predictions flagged
-            - fatal_flag_rate: proportion of fatal predictions flagged
+            - threshold_used: the threshold value used
+            - fatal_flag_count: number of fatal predictions flagged (if energy_model and class_dict has fatal classes)
+            - fatal_flag_rate: proportion of fatal predictions flagged (if energy_model and class_dict has fatal classes)
     """
     model = config["model"]
     criterion = config["criterion"]

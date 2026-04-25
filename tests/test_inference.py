@@ -263,7 +263,7 @@ class TestEvaluateBasic:
         expected = {
             "accuracy", "precision_macro", "recall_macro", "f1_macro",
             "precision_weighted", "recall_weighted", "f1_weighted",
-            "f1_per_class", "confusion_matrix",
+            "class_metrics", "confusion_matrix",
             "loss", "auto_classification_rate", "meets_requirement", "threshold_used",
         }
         assert expected.issubset(set(metrics.keys()))
