@@ -348,14 +348,13 @@ class TestEvaluateThreshold:
 
 
 class TestEvaluateFatalFlagging:
-    def test_fatal_keys_present_with_class_dict(self):
-        model = _NoLengthModel(out=3)
+    def test_fatal_metrics_absent_for_energy_model(self):
+        model = _NoLengthModel()
         dl = _make_dataloader()
-        config = _base_config(model, dl=dl)
-        config["class_dict"] = {0: "Safe", 1: "Single Fatality", 2: "Multiple Fatality"}
+        config = _base_config(model, dl=dl, energy_model=True)
         metrics = evaluate(config)
-        assert "fatal_flag_count" in metrics
-        assert "fatal_flag_rate" in metrics
+        assert metrics.get("fatal_flag_count") is None
+        assert metrics.get("fatal_flag_rate") is None
 
     def test_fatal_flag_count_non_negative(self):
         model = _NoLengthModel(out=3)
