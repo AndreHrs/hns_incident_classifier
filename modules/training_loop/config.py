@@ -33,6 +33,8 @@ def _build_train_config(
     scheduler_step_per_batch=False,
     save_dir="trained_models",
     run_name=None,
+    parameters=None,
+    compute_train_metrics=False,
     num_classes=None,
     extra_config=None,
 ):
@@ -65,6 +67,9 @@ def _build_train_config(
         raise ValueError(
             f"Invalid best_metric: {best_metric}. Must be one of 'loss', 'accuracy', 'precision_macro', 'recall_macro', 'f1_macro', 'precision_weighted', 'recall_weighted', 'f1_weighted'."
         )
+
+    if parameters is None:
+        parameters = {}
 
     if best_metric_mode is None:
         # Metrics containing "loss" are minimised; everything else maximised.
@@ -99,6 +104,8 @@ def _build_train_config(
         "best_metric_mode": best_metric_mode,
         "clip_grad_max_norm": clip_grad_max_norm,
         "scheduler_step_per_batch": scheduler_step_per_batch,
+        "parameters": parameters,
+        "compute_train_metrics": compute_train_metrics,
         "num_classes": num_classes,
         "started_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         # Useful run metadata
