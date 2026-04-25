@@ -348,13 +348,13 @@ class TestEvaluateThreshold:
 
 
 class TestEvaluateFatalFlagging:
-    def test_fatal_keys_absent_without_class_dict(self):
+    def test_fatal_metrics_absent_for_energy_model(self):
         model = _NoLengthModel()
         dl = _make_dataloader()
-        config = _base_config(model, dl=dl)
+        config = _base_config(model, dl=dl, energy_model=True)
         metrics = evaluate(config)
-        assert "fatal_flag_count" not in metrics
-        assert "fatal_flag_rate" not in metrics
+        assert metrics.get("fatal_flag_count") is None
+        assert metrics.get("fatal_flag_rate") is None
 
     def test_fatal_keys_present_with_class_dict(self):
         model = _NoLengthModel(out=3)
@@ -368,7 +368,7 @@ class TestEvaluateFatalFlagging:
     def test_fatal_flag_count_non_negative(self):
         model = _NoLengthModel(out=3)
         dl = _make_dataloader()
-        config = _base_config(model, dl=dl)
+        config = _base_config(model, dl=dl, energy_model=False)
         config["class_dict"] = {0: "Safe", 1: "Single Fatality", 2: "Multiple Fatality"}
         metrics = evaluate(config)
         assert metrics["fatal_flag_count"] >= 0
@@ -376,7 +376,7 @@ class TestEvaluateFatalFlagging:
     def test_fatal_flag_rate_in_zero_one_range(self):
         model = _NoLengthModel(out=3)
         dl = _make_dataloader()
-        config = _base_config(model, dl=dl)
+        config = _base_config(model, dl=dl, energy_model=False)
         config["class_dict"] = {0: "Safe", 1: "Single Fatality", 2: "Multiple Fatality"}
         metrics = evaluate(config)
         assert 0.0 <= metrics["fatal_flag_rate"] <= 1.0
@@ -384,7 +384,7 @@ class TestEvaluateFatalFlagging:
     def test_fatal_flag_count_consistent_with_rate(self):
         model = _NoLengthModel(out=3)
         dl = _make_dataloader(n=BATCH_SIZE)
-        config = _base_config(model, dl=dl)
+        config = _base_config(model, dl=dl, energy_model=False)
         config["class_dict"] = {0: "Safe", 1: "Single Fatality", 2: "Multiple Fatality"}
         metrics = evaluate(config)
         expected_rate = metrics["fatal_flag_count"] / BATCH_SIZE
