@@ -81,6 +81,7 @@ def _base_config(model, *, need_length=False, energy_model=True, dl=None):
         "energy_model": energy_model,
         "num_classes": NUM_CLASSES,
         "criterion": nn.CrossEntropyLoss(),
+        "use_temperature": False,
     }
     if dl is not None:
         cfg["test_dl"] = dl
