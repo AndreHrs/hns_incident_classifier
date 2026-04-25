@@ -144,7 +144,15 @@ class TestSerialiseValue:
 # ── _compute_classification_metrics ──────────────────────────────────────────
 
 
+
+
 class TestComputeClassificationMetrics:
+    config = {
+        "num_classes": None,
+        "class_dict": {},
+        "threshold": 0.80,
+    }
+    
     def test_perfect_predictions(self, config):
         y = torch.tensor([0, 1, 2, 0, 1, 2])
         config["num_classes"] = 3

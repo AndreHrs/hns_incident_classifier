@@ -76,10 +76,13 @@ def _make_dataloader(n=BATCH_SIZE, seed=42):
 def _base_config(model, *, need_length=False, energy_model=True, dl=None):
     cfg = {
         "model": model,
+        "test_dl": None,  
         "device": torch.device("cpu"),
         "need_length": need_length,
         "energy_model": energy_model,
         "num_classes": NUM_CLASSES,
+        "class_dict": {},
+        "threshold": 0.80,
         "criterion": nn.CrossEntropyLoss(),
         "use_temperature": False,
     }
