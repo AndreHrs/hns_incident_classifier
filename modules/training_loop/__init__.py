@@ -57,8 +57,8 @@ def training(
     model_type="Simple",
     save=True,
     scheduler=None,  # need to be defined outside
-    criterion=None,  # need to be defined outside
     criterion_type="cross_entropy",
+    criterion_args={}, 
     need_length=False,
     energy_model=False,
     best_metric="loss",  # must be in: "loss", "accuracy", "precision_macro", "recall_macro", "f1_macro", "precision_weighted", "recall_weighted", "f1_weighted"
@@ -87,8 +87,8 @@ def training(
         model_type: Label used for saving and logging.
         save: Whether to save model artifacts after training.
         scheduler: Learning rate scheduler. Defaults to StepLR.
-        criterion: Loss function. Defaults to CrossEntropyLoss.
         criterion_type: Loss function type. One of 'cross_entropy', 'focal'. Defaults to 'cross_entropy'.
+        criterion_args: Dictionary of additional arguments for the loss function.
         need_length: Whether the model expects sequence lengths as input.
         energy_model: If True, predict energy type; otherwise predict risk.
         best_metric: Metric used to select the best model checkpoint.
@@ -119,8 +119,8 @@ def training(
         save=save,
         optimiser=optimiser,
         scheduler=scheduler,
-        criterion=criterion,
         criterion_type=criterion_type,
+        criterion_args=criterion_args,
         need_length=need_length,
         energy_model=energy_model,
         best_metric=best_metric,

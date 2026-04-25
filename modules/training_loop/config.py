@@ -23,8 +23,8 @@ def _build_train_config(
     save=True,
     optimiser=None,
     scheduler=None,
-    criterion=None,
     criterion_type="cross_entropy",
+    criterion_args={},
     need_length=False,
     energy_model=False,
     best_metric="loss",
@@ -46,13 +46,14 @@ def _build_train_config(
     if scheduler is None:
         scheduler = optim.lr_scheduler.StepLR(optimiser, step_size=1, gamma=0.95)
 
-    if criterion is None:
-        if criterion_weights is not None:
-            criterion_weights = criterion_weights.to(device)
-        criterion = get_loss_function(
-            criterion_type=criterion_type,
-            weight=criterion_weights,
-        )
+
+    if criterion_weights is not None:
+        criterion_weights = criterion_weights.to(device)
+    criterion = get_loss_function(
+        criterion_type=criterion_type,
+        weight=criterion_weights,
+        criterion_args=criterion_args,
+    )
 
     if best_metric not in {
         "loss",
