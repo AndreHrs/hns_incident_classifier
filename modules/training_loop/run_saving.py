@@ -53,11 +53,12 @@ class RunSaver:
         }
 
     # CREATE DIRECTORY // Create a directory for saving run artifacts based on the current timestamp
-    def create_directory(self, config, timestamp):
+    def create_directory(self, config):
         """Create a directory for saving run artifacts."""
-        parent_dir = Path(config["save_dir"])
-        save_dir = parent_dir / f"{timestamp}_{config['save_name']}"
+        parent_dir = Path(config["parent_dir"])
+        save_dir = parent_dir / f"{config['timestamp']}_{config['save_name']}"
         save_dir.mkdir(parents=True, exist_ok=True)
+        config["save_dir"] = save_dir  # Add save_dir to config for later use
         return save_dir
 
     # APPEND METRICS TO HISTORY // Append the metrics for the current epoch to the history dictionary
@@ -69,11 +70,11 @@ class RunSaver:
                 history_section[key].append(metrics[key])
 
     # SAVE RUN ARTIFACTS // Save the best model state dict and run summary to disk
-    def save_artifacts(self, config, run_summary, save_dir):
+    def save_artifacts(self, config, run_summary):
         """Save the best model state dict and run summary JSON to disk."""
-        model_path = save_dir / f"{config['save_name']}_model.pt"
-        history_path = save_dir / f"{config['save_name']}_history.pt"
-        summary_path = save_dir / f"{config['save_name']}_run_summary.json"
+        model_path = config["save_dir"] / f"{config['save_name']}_model.pt"
+        history_path = config["save_dir"] / f"{config['save_name']}_history.pt"
+        summary_path = config["save_dir"] / f"{config['save_name']}_run_summary.json"
 
         torch.save(run_summary["best_model_state_dict"], model_path)
         torch.save(run_summary["history"], history_path)
@@ -91,6 +92,7 @@ class RunSaver:
                 "criterion",
             }
         }
+
         serialisable_config["metadata"] = {
             **serialisable_config.get("metadata", {}),
             "optimiser_defaults": _serialise_value(
