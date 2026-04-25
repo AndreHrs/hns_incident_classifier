@@ -40,9 +40,12 @@ def evaluate(config):
             - auto_classification_rate: proportion of predictions above threshold
             - meets_requirement: whether auto_classification_rate >= 0.70
             - threshold_used: the threshold value used
-            - fatal_flag_count: number of fatal predictions flagged (if energy_model and class_dict has fatal classes)
-            - fatal_flag_rate: proportion of fatal predictions flagged (if energy_model and class_dict has fatal classes)
+            - fatal_flag_count: number of fatal predictions flagged (if not energy_model and class_dict has fatal classes)
+            - fatal_flag_rate: proportion of fatal predictions flagged (if not energy_model and class_dict has fatal classes)
     """
+    if config["test_dl"] is None:
+        return {}
+
     model = config["model"]
     criterion = config["criterion"]
 
@@ -89,7 +92,7 @@ def evaluate(config):
     high_confidence = (max_probs > config["threshold"]).sum().item()
     metrics["auto_classification_rate"] = high_confidence / max(total_examples, 1)
     metrics["meets_requirement"] = metrics["auto_classification_rate"] >= 0.70
-    metrics["threshold_used"] = threshold
+    metrics["threshold_used"] = config["threshold"]
 
     # Fatal category flagging - 100% of fatal predictions must be flagged
     if not config["energy_model"]:

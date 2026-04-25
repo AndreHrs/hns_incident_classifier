@@ -84,6 +84,7 @@ def _base_config(model, *, need_length=False, energy_model=True, dl=None):
         "class_dict": {},
         "threshold": 0.80,
         "criterion": nn.CrossEntropyLoss(),
+        "temperature": 1.5,
         "use_temperature": False,
     }
     if dl is not None:

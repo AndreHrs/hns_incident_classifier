@@ -145,14 +145,15 @@ class TestSerialiseValue:
 
 
 
-
-class TestComputeClassificationMetrics:
-    config = {
-        "num_classes": None,
+@pytest.fixture
+def config():
+    return {
+        "num_classes": 3,
         "class_dict": {},
         "threshold": 0.80,
     }
-    
+
+class TestComputeClassificationMetrics:
     def test_perfect_predictions(self, config):
         y = torch.tensor([0, 1, 2, 0, 1, 2])
         config["num_classes"] = 3
