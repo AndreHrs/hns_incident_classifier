@@ -7,6 +7,8 @@ from pathlib import Path
 
 from .metrics import _compute_classification_metrics
 from .utility import _unpack_batch
+from .run_saving import RunSaver
+from modules.inference import run_inference
 
 FATAL_CLASSES = ["Single Fatality", "Multiple Fatality"]
 
@@ -86,6 +88,7 @@ def evaluate(config):
     high_confidence = (max_probs > config["threshold"]).sum().item()
     metrics["auto_classification_rate"] = high_confidence / max(total_examples, 1)
     metrics["meets_requirement"] = metrics["auto_classification_rate"] >= 0.70
+    metrics["threshold_used"] = threshold
 
     # Fatal category flagging - 100% of fatal predictions must be flagged
     if not config["energy_model"]:

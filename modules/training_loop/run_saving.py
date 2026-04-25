@@ -73,6 +73,7 @@ class RunSaver:
                 "fatal_flag_count": [],
                 "fatal_flag_rate": [],
                 "meets_requirement": [],
+                "threshold_used": [],
             },
         }
 

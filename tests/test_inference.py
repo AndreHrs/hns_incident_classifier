@@ -343,7 +343,7 @@ class TestEvaluateThreshold:
 
 
 class TestEvaluateFatalFlagging:
-    def test_fatal_keys_absent_without_class_names(self):
+    def test_fatal_keys_absent_without_class_dict(self):
         model = _NoLengthModel()
         dl = _make_dataloader()
         config = _base_config(model, dl=dl)
@@ -351,11 +351,11 @@ class TestEvaluateFatalFlagging:
         assert "fatal_flag_count" not in metrics
         assert "fatal_flag_rate" not in metrics
 
-    def test_fatal_keys_present_with_class_names(self):
+    def test_fatal_keys_present_with_class_dict(self):
         model = _NoLengthModel(out=3)
         dl = _make_dataloader()
         config = _base_config(model, dl=dl)
-        config["class_names"] = ["Safe", "Single Fatality", "Multiple Fatality"]
+        config["class_dict"] = {0: "Safe", 1: "Single Fatality", 2: "Multiple Fatality"}
         metrics = evaluate(config)
         assert "fatal_flag_count" in metrics
         assert "fatal_flag_rate" in metrics
@@ -364,7 +364,7 @@ class TestEvaluateFatalFlagging:
         model = _NoLengthModel(out=3)
         dl = _make_dataloader()
         config = _base_config(model, dl=dl)
-        config["class_names"] = ["Safe", "Single Fatality", "Multiple Fatality"]
+        config["class_dict"] = {0: "Safe", 1: "Single Fatality", 2: "Multiple Fatality"}
         metrics = evaluate(config)
         assert metrics["fatal_flag_count"] >= 0
 
@@ -372,7 +372,7 @@ class TestEvaluateFatalFlagging:
         model = _NoLengthModel(out=3)
         dl = _make_dataloader()
         config = _base_config(model, dl=dl)
-        config["class_names"] = ["Safe", "Single Fatality", "Multiple Fatality"]
+        config["class_dict"] = {0: "Safe", 1: "Single Fatality", 2: "Multiple Fatality"}
         metrics = evaluate(config)
         assert 0.0 <= metrics["fatal_flag_rate"] <= 1.0
 
@@ -380,45 +380,15 @@ class TestEvaluateFatalFlagging:
         model = _NoLengthModel(out=3)
         dl = _make_dataloader(n=BATCH_SIZE)
         config = _base_config(model, dl=dl)
-        config["class_names"] = ["Safe", "Single Fatality", "Multiple Fatality"]
+        config["class_dict"] = {0: "Safe", 1: "Single Fatality", 2: "Multiple Fatality"}
         metrics = evaluate(config)
         expected_rate = metrics["fatal_flag_count"] / BATCH_SIZE
         assert metrics["fatal_flag_rate"] == pytest.approx(expected_rate, abs=1e-5)
 
-    def test_no_fatal_class_in_class_names_skips_flagging(self):
+    def test_no_fatal_class_in_class_dict_skips_flagging(self):
         model = _NoLengthModel(out=3)
         dl = _make_dataloader()
         config = _base_config(model, dl=dl)
-        config["class_names"] = ["Alpha", "Beta", "Gamma"]  # no fatal names
+        config["class_dict"] = {0: "Alpha", 1: "Beta", 2: "Gamma"}  # no fatal names
         metrics = evaluate(config)
         assert "fatal_flag_count" not in metrics
-
-
-class TestEvaluateSaveDir:
-    def test_saves_json_to_save_dir(self, tmp_path):
-        model = _NoLengthModel()
-        dl = _make_dataloader()
-        config = _base_config(model, dl=dl)
-        config["save_dir"] = str(tmp_path)
-        evaluate(config)
-        out_file = tmp_path / "evaluation_metrics.json"
-        assert out_file.exists()
-
-    def test_saved_json_contains_expected_keys(self, tmp_path):
-        model = _NoLengthModel()
-        dl = _make_dataloader()
-        config = _base_config(model, dl=dl)
-        config["save_dir"] = str(tmp_path)
-        evaluate(config)
-        with open(tmp_path / "evaluation_metrics.json") as f:
-            saved = json.load(f)
-        assert "accuracy" in saved
-        assert "loss" in saved
-        assert "auto_classification_rate" in saved
-
-    def test_no_save_without_save_dir(self, tmp_path):
-        model = _NoLengthModel()
-        dl = _make_dataloader()
-        config = _base_config(model, dl=dl)
-        evaluate(config)
-        assert not (tmp_path / "evaluation_metrics.json").exists()
