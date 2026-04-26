@@ -31,8 +31,8 @@ def _build_train_config(
     train_dl,
     valid_dl,
     test_dl,
-    use_weighted_sampler=False,
-    train_labels=None,
+    use_weighted_sampler,
+    train_labels,
     #
     epochs,
     patience,
