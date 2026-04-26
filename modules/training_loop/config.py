@@ -113,6 +113,7 @@ def _build_train_config(
         "scheduler_step_per_batch": scheduler_step_per_batch,
         #
         "criterion": criterion,
+        "criterion_type": criterion_type,
         #
         "train_dl": train_dl,
         "valid_dl": valid_dl,
