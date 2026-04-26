@@ -34,15 +34,20 @@ def _build_train_config(
     epochs,
     patience,
     num_classes,
+    class_dict,
     clip_grad_max_norm,
     #
     best_metric,
     best_metric_mode,
     #
+    threshold,
+    temperature,
+    use_temperature,
+    #
     parameters,
     device,
     #
-    compute_train_metrics,
+    compute_train_metrics,      # unused currently
     save,
     parent_dir,
     run_name,
@@ -115,6 +120,7 @@ def _build_train_config(
         "epochs": epochs,
         "patience": patience,
         "num_classes": num_classes,
+        "class_dict": class_dict,
         "clip_grad_max_norm": clip_grad_max_norm,
         #
         "compute_train_metrics": compute_train_metrics,
@@ -125,6 +131,10 @@ def _build_train_config(
         #
         "best_metric": best_metric,
         "best_metric_mode": best_metric_mode,
+        #
+        "threshold": threshold,
+        "temperature": temperature,
+        "use_temperature": use_temperature,
         #
         "parameters": parameters,
         "device": device,

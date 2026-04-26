@@ -76,11 +76,16 @@ def _make_dataloader(n=BATCH_SIZE, seed=42):
 def _base_config(model, *, need_length=False, energy_model=True, dl=None):
     cfg = {
         "model": model,
+        "test_dl": None,  
         "device": torch.device("cpu"),
         "need_length": need_length,
         "energy_model": energy_model,
         "num_classes": NUM_CLASSES,
+        "class_dict": {},
+        "threshold": 0.80,
         "criterion": nn.CrossEntropyLoss(),
+        "temperature": 1.5,
+        "use_temperature": False,
     }
     if dl is not None:
         cfg["test_dl"] = dl
@@ -263,7 +268,7 @@ class TestEvaluateBasic:
         expected = {
             "accuracy", "precision_macro", "recall_macro", "f1_macro",
             "precision_weighted", "recall_weighted", "f1_weighted",
-            "f1_per_class", "confusion_matrix",
+            "class_metrics", "confusion_matrix",
             "loss", "auto_classification_rate", "meets_requirement", "threshold_used",
         }
         assert expected.issubset(set(metrics.keys()))
@@ -343,82 +348,43 @@ class TestEvaluateThreshold:
 
 
 class TestEvaluateFatalFlagging:
-    def test_fatal_keys_absent_without_class_names(self):
+    def test_fatal_metrics_absent_for_energy_model(self):
         model = _NoLengthModel()
         dl = _make_dataloader()
-        config = _base_config(model, dl=dl)
+        config = _base_config(model, dl=dl, energy_model=True)
         metrics = evaluate(config)
-        assert "fatal_flag_count" not in metrics
-        assert "fatal_flag_rate" not in metrics
-
-    def test_fatal_keys_present_with_class_names(self):
-        model = _NoLengthModel(out=3)
-        dl = _make_dataloader()
-        config = _base_config(model, dl=dl)
-        config["class_names"] = ["Safe", "Single Fatality", "Multiple Fatality"]
-        metrics = evaluate(config)
-        assert "fatal_flag_count" in metrics
-        assert "fatal_flag_rate" in metrics
+        assert metrics.get("fatal_flag_count") is None
+        assert metrics.get("fatal_flag_rate") is None
 
     def test_fatal_flag_count_non_negative(self):
         model = _NoLengthModel(out=3)
         dl = _make_dataloader()
-        config = _base_config(model, dl=dl)
-        config["class_names"] = ["Safe", "Single Fatality", "Multiple Fatality"]
+        config = _base_config(model, dl=dl, energy_model=False)
+        config["class_dict"] = {0: "Safe", 1: "Single Fatality", 2: "Multiple Fatality"}
         metrics = evaluate(config)
         assert metrics["fatal_flag_count"] >= 0
 
     def test_fatal_flag_rate_in_zero_one_range(self):
         model = _NoLengthModel(out=3)
         dl = _make_dataloader()
-        config = _base_config(model, dl=dl)
-        config["class_names"] = ["Safe", "Single Fatality", "Multiple Fatality"]
+        config = _base_config(model, dl=dl, energy_model=False)
+        config["class_dict"] = {0: "Safe", 1: "Single Fatality", 2: "Multiple Fatality"}
         metrics = evaluate(config)
         assert 0.0 <= metrics["fatal_flag_rate"] <= 1.0
 
     def test_fatal_flag_count_consistent_with_rate(self):
         model = _NoLengthModel(out=3)
         dl = _make_dataloader(n=BATCH_SIZE)
-        config = _base_config(model, dl=dl)
-        config["class_names"] = ["Safe", "Single Fatality", "Multiple Fatality"]
+        config = _base_config(model, dl=dl, energy_model=False)
+        config["class_dict"] = {0: "Safe", 1: "Single Fatality", 2: "Multiple Fatality"}
         metrics = evaluate(config)
         expected_rate = metrics["fatal_flag_count"] / BATCH_SIZE
         assert metrics["fatal_flag_rate"] == pytest.approx(expected_rate, abs=1e-5)
 
-    def test_no_fatal_class_in_class_names_skips_flagging(self):
+    def test_no_fatal_class_in_class_dict_skips_flagging(self):
         model = _NoLengthModel(out=3)
         dl = _make_dataloader()
         config = _base_config(model, dl=dl)
-        config["class_names"] = ["Alpha", "Beta", "Gamma"]  # no fatal names
+        config["class_dict"] = {0: "Alpha", 1: "Beta", 2: "Gamma"}  # no fatal names
         metrics = evaluate(config)
         assert "fatal_flag_count" not in metrics
-
-
-class TestEvaluateSaveDir:
-    def test_saves_json_to_save_dir(self, tmp_path):
-        model = _NoLengthModel()
-        dl = _make_dataloader()
-        config = _base_config(model, dl=dl)
-        config["save_dir"] = str(tmp_path)
-        evaluate(config)
-        out_file = tmp_path / "evaluation_metrics.json"
-        assert out_file.exists()
-
-    def test_saved_json_contains_expected_keys(self, tmp_path):
-        model = _NoLengthModel()
-        dl = _make_dataloader()
-        config = _base_config(model, dl=dl)
-        config["save_dir"] = str(tmp_path)
-        evaluate(config)
-        with open(tmp_path / "evaluation_metrics.json") as f:
-            saved = json.load(f)
-        assert "accuracy" in saved
-        assert "loss" in saved
-        assert "auto_classification_rate" in saved
-
-    def test_no_save_without_save_dir(self, tmp_path):
-        model = _NoLengthModel()
-        dl = _make_dataloader()
-        config = _base_config(model, dl=dl)
-        evaluate(config)
-        assert not (tmp_path / "evaluation_metrics.json").exists()

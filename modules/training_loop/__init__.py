@@ -67,10 +67,15 @@ def training(
     epochs=10,
     patience=3,
     num_classes=None,
+    class_dict={},
     clip_grad_max_norm=1.0,
     #
     best_metric="loss",  # must be in: "loss", "accuracy", "precision_macro", "recall_macro", "f1_macro", "precision_weighted", "recall_weighted", "f1_weighted"
     best_metric_mode=None,
+    #
+    threshold=0.80,
+    temperature=1.5,
+    use_temperature=True,
     #
     parameters={},
     device="cpu",
@@ -107,13 +112,18 @@ def training(
         valid_dl:  DataLoader for validation data.
         test_dl:   DataLoader for test data.
 
-        epochs:       Number of training epochs.
-        patience:     Early stopping patience in epochs.
-        num_classes:  Number of output classes.
+        epochs:              Number of training epochs.
+        patience:            Early stopping patience in epochs.
+        num_classes:         Number of output classes.
+        class_dict:          Dictionary mapping class indices to class names // i.e. class index -> class name
         clip_grad_max_norm:  Max norm for gradient clipping.
 
         best_metric:         Metric used to select the best model checkpoint.
         best_metric_mode:    Towards 'min' or 'max' // Inferred from best_metric if None.
+
+        threshold:        Confidence threshold for auto-classification.
+        temperature:      Temperature for scaling logits...if use_temperature is True.
+        use_temperature:  Whether to apply temperature scaling to logits.
 
         parameters:  The training parameters in a dictionary format.
         device:      Device string, e.g. 'cpu' or 'cuda'.
@@ -155,10 +165,15 @@ def training(
         epochs=epochs,
         patience=patience,
         num_classes=num_classes,
+        class_dict=class_dict,
         clip_grad_max_norm=clip_grad_max_norm,
         #
         best_metric=best_metric,
         best_metric_mode=best_metric_mode,
+        #
+        threshold=threshold,
+        temperature=temperature,
+        use_temperature=use_temperature,
         #
         parameters=parameters,
         device=device,

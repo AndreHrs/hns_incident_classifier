@@ -13,6 +13,7 @@ from .one_epoch import train_one_epoch
 from .validation import validate
 from .run_saving import RunSaver
 from .utility import _safe_class_name, _serialise_value, _is_better
+from .evaluate import evaluate
 from ..leaderboard import log_run
 
 
@@ -96,7 +97,12 @@ def train_model_loop(
 
     if best_model_state_dict is not None:
         config["model"].load_state_dict(best_model_state_dict)
+    
+    # Final evaluation on test set using the best model
+    test_metrics = evaluate(config)
+    run_saver.append_metrics("test", test_metrics, training=False)
 
+    # Prepare run_summary for saving
     run_summary = {
         "config": config,
         "history": run_saver.history,
