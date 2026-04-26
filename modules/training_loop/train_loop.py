@@ -57,7 +57,7 @@ def train_model_loop(
         if config["scheduler"] is not None and not config["scheduler_step_per_batch"]:
             config["scheduler"].step()
 
-        run_saver.history["epoch_time_sec"].append(time.time() - epoch_start_time)
+        run_saver.history["training"]["epoch_time_sec"].append(time.time() - epoch_start_time)
 
         run_saver.append_metrics("train", train_metrics)
         run_saver.append_metrics("val", val_metrics)
@@ -67,7 +67,7 @@ def train_model_loop(
         print("-" * 120)
         print(
             f"| Epoch {epoch:03d} "
-            f"| Time: {run_saver.history['epoch_time_sec'][-1]:7.2f}s "
+            f"| Time: {run_saver.history['training']['epoch_time_sec'][-1]:7.2f}s "
             f"| Train Loss: {train_metrics['loss']:.4f} "
             f"| Train Acc: {train_metrics['accuracy'] * 100:.2f}% "
             f"| Val Loss: {val_metrics['loss']:.4f} "

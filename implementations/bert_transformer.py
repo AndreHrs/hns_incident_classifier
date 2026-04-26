@@ -61,10 +61,49 @@ def run_bert_experiment(
     pooling="mean",
     batch_size=8,
     epochs=5,
+    learning_rate=None,
+    dropout=0.2,
+    max_length=160,
+    use_class_weights=False,
+    weight_decay=0.01,
+    threshold=0.8,
 ):
     """
     Train and evaluate a BERT classifier for one target label.
     
+    :param train_df: Training dataframe.
+    :type train_df: pandas.DataFrame
+    :param valid_df: Validation dataframe.
+    :type valid_df: pandas.DataFrame
+    :param test_df: Test dataframe.
+    :type test_df: pandas.DataFrame
+    :param text_col: Name of the column containing text data.
+    :type text_col: str
+    :param label_col: Name of the column containing label data.
+    :type label_col: str
+    :param run_name: Name for this training run (used in saved model filename).
+    :type run_name: str
+    :param fine_tune: Whether to fine-tune the BERT model or keep it frozen.
+    :type fine_tune: bool
+    :param pooling: Pooling strategy for sentence embedding ("cls" or "mean").
+    :type pooling: str
+    :param batch_size: Batch size for training and evaluation.
+    :type batch_size: int
+    :param epochs: Maximum number of training epochs.
+    :type epochs: int
+    :param learning_rate: Learning rate for the optimizer. If None, defaults to 2e-5 for fine-tuning and 1e-4 for frozen BERT.
+    :type learning_rate: float | None
+    :param dropout: Dropout rate for the classifier head.
+    :type dropout: float
+    :param max_length: Maximum sequence length for BERT tokenizer.
+    :type max_length: int
+    :param use_class_weights: Whether to use class weights in the loss function to handle class imbalance.
+    :type use_class_weights: bool
+    :param weight_decay: Weight decay (L2 regularization) factor for the optimizer.
+    :type weight_decay: float
+    
+    :returns: Tuple of (run_summary, test_metrics) where run_summary contains training history and test_metrics contains evaluation results on the test set.
+    :rtype: Tuple[dict, dict]
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -77,11 +116,11 @@ def run_bert_experiment(
 
     bert_config = BertEmbeddingConfig(
         model_name="bert-base-uncased",
-        max_length=160,
+        max_length=max_length,
         dropout=0.1,
         pooling=pooling,
         fine_tune=fine_tune,
-    )
+        )
 
     tokenizer_wrapper = BertTokenizerWrapper(bert_config)
 
@@ -117,79 +156,89 @@ def run_bert_experiment(
     model = BertClassifier(
         embedding_backend=embedding_backend,
         num_classes=label_encoder.num_classes,
-        dropout=0.2,
+        dropout=dropout,
     ).to(device)
+
+    if learning_rate is None:
+        learning_rate = 2e-5 if fine_tune else 1e-4
 
     optimiser = optim.AdamW(
         model.parameters(),
-        lr=2e-5 if fine_tune else 1e-3,
+        lr=learning_rate,
+        weight_decay=weight_decay,
     )
+    
+    criterion_weights = None
+
+    if use_class_weights:
+        class_counts = train_df[label_col].value_counts().sort_index()
+        weights = 1.0 / class_counts
+        weights = weights / weights.mean()
+        criterion_weights = torch.tensor(weights.values, dtype=torch.float)
 
     config = _build_train_config(
         model=model,
+        energy_model=True,
+        model_type="BERT",
+        need_length=False,
+
+        optimiser=optimiser,
+        optimiser_args=None,
+
+        scheduler=None,
+        scheduler_step_per_batch=False,
+
+        criterion_type="cross_entropy",
+        criterion_weights=criterion_weights,
+        criterion_args=None,
+
         train_dl=train_dl,
         valid_dl=valid_dl,
+        test_dl=test_dl,
+
         epochs=epochs,
-        device=device,
         patience=2,
-        criterion_weights=None,
-        model_type="BERT",
-        optimiser=optimiser,
-        scheduler=None,
-        need_length=False,
-        energy_model=True,
-        best_metric="f1_macro",
-        save=True,
         num_classes=label_encoder.num_classes,
-        run_name=run_name,
-        extra_config={
-            "test_dl": test_dl,
-            "class_names": class_names,
-            "threshold": 0.80,
-            "use_temperature": False,
+        class_dict=label_encoder.id_to_label,
+        clip_grad_max_norm=1.0,
+
+        best_metric="f1_macro",
+        best_metric_mode=None,
+
+        threshold=threshold,
+        temperature=1.0,
+        use_temperature=False,
+
+        parameters={
+            "model_name": "bert-base-uncased",
+            "pooling": pooling,
+            "fine_tune": fine_tune,
+            "batch_size": batch_size,
             "label_col": label_col,
+            "text_col": text_col,
+            "learning_rate": learning_rate,
+            "dropout": dropout,
+            "max_length": max_length,
+            "use_class_weights": use_class_weights,
+            "weight_decay": weight_decay,
+        },
+        device=device,
+
+        compute_train_metrics=False,
+        save=True,
+        parent_dir="trained_models",
+        run_name=run_name,
+
+        extra_config={
+            "class_names": class_names,
+            "label_col": label_col,
+            "text_col": text_col,
             "pooling": pooling,
             "fine_tune": fine_tune,
         },
-    )
+)
 
     run_summary = train_model_loop(config)
     test_metrics = evaluate(config)
 
     return run_summary, test_metrics
-
-
-# if __name__ == "__main__":
-#     TEXT_COL = "Detailed Description of Event"
-
-#     _, energy_metrics = run_bert_experiment(
-#         train_path="dataset/model1_train.csv",
-#         valid_path="dataset/model1_valid.csv",
-#         test_path="dataset/model1_test.csv",
-#         text_col=TEXT_COL,
-#         label_col="Energy Type",
-#         run_name="bert_energy_frozen_mean",
-#         fine_tune=False,
-#         pooling="mean",
-#         batch_size=8,
-#         epochs=5,
-#     )
-
-#     print("BERT Energy Type metrics:")
-#     print(energy_metrics)
-
-#     _, risk_metrics = run_bert_experiment(
-#         train_path="dataset/model2_train.csv",
-#         valid_path="dataset/model2_valid.csv",
-#         test_path="dataset/model2_test.csv",
-#         text_col=TEXT_COL,
-#         label_col="Type of Potential Damage",
-#         run_name="bert_risk_frozen_mean",
-#         fine_tune=False,
-#         pooling="mean",
-#         batch_size=8,
-#         epochs=5,
-#     )
-
-#     print("BERT Risk metrics:")
-#     print(risk_metrics)
