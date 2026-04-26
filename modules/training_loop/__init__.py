@@ -180,7 +180,7 @@ def training(
         #
         compute_train_metrics=compute_train_metrics,
         save=save,
-        save_dir=save_dir,
+        parent_dir=parent_dir,
         run_name=run_name,
         #
         extra_config=extra_config,
