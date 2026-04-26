@@ -30,8 +30,7 @@ def train_model_loop(
         best model state dict, and total training time.
     """
     run_saver = RunSaver()
-    training_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    save_dir = run_saver.create_directory(config, training_timestamp)
+    config["save_dir"] = run_saver.create_directory(config)
 
     patience_counter = 0
     best_metric_value = None
@@ -78,6 +77,7 @@ def train_model_loop(
         )
         print("-" * 120)
 
+        # Check for improvement and update best model if needed, otherwise increment patience counter
         if _is_better(
             current_metric_value, best_metric_value, config["best_metric_mode"]
         ):
@@ -108,11 +108,11 @@ def train_model_loop(
 
     if config["save"] and best_model_state_dict is not None:
         model_path, summary_path = run_saver.save_artifacts(
-            config, run_summary, save_dir
+            config, run_summary
         )
-        run_saver.plot_history(best_epoch, save_dir, config["save_name"])
+        run_saver.plot_history(best_epoch, config["save_dir"], config["save_name"])
 
-        print(f"Run saved to: {save_dir}")
+        print(f"Run saved to: {config['save_dir']}")
         print(f"Total training time: {total_train_time:.4f}s")
         print(f"Best epoch: {best_epoch}")
         print(f"Best {config['best_metric']}: {best_metric_value:.6f}")

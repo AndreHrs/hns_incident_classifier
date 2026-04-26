@@ -1,4 +1,9 @@
-"""Configurable loss functions for training."""
+"""Configurable loss functions for training.
+
+Currently supports:
+- CrossEntropyLoss  (with optional class weights).
+- FocalLoss         (with optional class weights, gamma parameter and reduction method).
+"""
 
 import torch
 import torch.nn as nn
@@ -6,18 +11,22 @@ import torch.nn.functional as F
 
 
 # LOSS FUNCTION FACTORY // Return a loss function based on a string identifier, with optional class weights and arguments
-def get_loss_function(criterion_type="cross_entropy", weight=None, criterion_args={}):
+def get_loss_function(criterion_type="cross_entropy", weight=None, criterion_args={}, device=None):
     """Return a loss function based on the criterion_type string.
 
     Args:
         criterion_type: One of 'cross_entropy', 'focal'.
         weight: Optional class weights tensor.
         criterion_args: Dictionary of additional arguments for the loss function.
+        device: Device to move weight tensor to.
 
     Returns:
         A loss function (nn.Module).
     """
     criterion_type = criterion_type.lower()
+    
+    if weight is not None and device is not None:
+        weight = weight.to(device)
 
     if criterion_type == "cross_entropy":
         return nn.CrossEntropyLoss(weight=weight)

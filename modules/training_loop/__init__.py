@@ -29,7 +29,6 @@ TRAINING LOOP MODULE // Files related to the main training loop and its componen
 Functionality notes (): 
  - Support for different loss functions 
     -> currently supports any loss function that can be called as `criterion(preds, labels)` and returns a scalar loss value. 
-        -> Could add support for more complex loss functions that require additional inputs (e.g., class weights, sample weights, etc.)
  - More detailed model saving 
     -> model saving is now more detailed
  - More detailed logging (e.g., using TensorBoard or a logging library instead of print statements)
@@ -47,60 +46,82 @@ Functionality notes ():
 # EXPOSED TRAINING FUNCTION // main function to call for training a model, which builds the config and calls the main training loop
 def training(
     model,
+    energy_model=False,
+    model_type="Simple",
+    need_length=False,
+    #
     optimiser=None,
+    optimiser_args={},
+    #
+    scheduler=None,  # need to be defined outside
+    scheduler_step_per_batch=False,
+    #
+    criterion_type="cross_entropy",
+    criterion_weights=None,
+    criterion_args={}, 
+    #
     train_dl=None,
     valid_dl=None,
+    test_dl=None,
+    #
     epochs=10,
-    device="cpu",
     patience=3,
-    criterion_weights=None,
-    model_type="Simple",
-    save=True,
-    scheduler=None,  # need to be defined outside
-    criterion_type="cross_entropy",
-    criterion_args={}, 
-    need_length=False,
-    energy_model=False,
+    num_classes=None,
+    clip_grad_max_norm=1.0,
+    #
     best_metric="loss",  # must be in: "loss", "accuracy", "precision_macro", "recall_macro", "f1_macro", "precision_weighted", "recall_weighted", "f1_weighted"
     best_metric_mode=None,
-    clip_grad_max_norm=1.0,
-    scheduler_step_per_batch=False,
-    save_dir="trained_models",
+    #
+    parameters={},
+    device="cpu",
+    #
+    compute_train_metrics=True,
+    save=True,
+    parent_dir="trained_models",
     run_name=None,
-    compute_train_metrics=False,
-    parameters=None,
-    num_classes=None,
+    #
     extra_config=None,
     **_,
 ):
     """Build training config and run the full training loop.
 
     Args:
-        model: PyTorch model to train.
-        optimiser: Optimizer instance. Defaults to Adam with lr=1e-3.
-        train_dl: DataLoader for training data.
-        valid_dl: DataLoader for validation data.
-        epochs: Number of training epochs.
-        device: Device string, e.g. 'cpu' or 'cuda'.
-        patience: Early stopping patience in epochs.
-        criterion_weights: Optional class weights for the loss function.
-        model_type: Label used for saving and logging.
-        save: Whether to save model artifacts after training.
-        scheduler: Learning rate scheduler. Defaults to StepLR.
-        criterion_type: Loss function type. One of 'cross_entropy', 'focal'. Defaults to 'cross_entropy'.
-        criterion_args: Dictionary of additional arguments for the loss function.
-        need_length: Whether the model expects sequence lengths as input.
-        energy_model: If True, predict energy type; otherwise predict risk.
-        best_metric: Metric used to select the best model checkpoint.
-        best_metric_mode: 'min' or 'max'. Inferred from best_metric if None.
-        clip_grad_max_norm: Max norm for gradient clipping.
-        scheduler_step_per_batch: Step scheduler per batch instead of per epoch.
-        save_dir: Directory to save model artifacts.
-        run_name: Optional name for the run.
-        compute_train_metrics: Whether to compute metrics on the training set.
-        parameters: The training parameters,
-        num_classes: Number of output classes.
-        extra_config: Optional dict of additional config keys to merge.
+        model:          PyTorch model to train.
+        energy_model:   True = predict energy type; False = predict risk type.
+        model_type:     Label used for saving and logging.
+        need_length:    Whether the model expects sequence lengths as input.
+
+        optimiser:  Optimizer instance. Defaults to Adam with lr=1e-3.
+        optimiser_args: Dictionary of additional arguments for the optimizer.
+
+        scheduler:                  Learning rate scheduler. Defaults to StepLR.
+        scheduler_step_per_batch:   Step scheduler per batch instead of per epoch.
+
+        criterion_type:     Loss function type. One of 'cross_entropy', 'focal'. Defaults to 'cross_entropy'.
+        criterion_weights:  Optional class weights for the loss function.
+        criterion_args:     Dictionary of additional arguments for the loss function.
+
+        train_dl:  DataLoader for training data.
+        valid_dl:  DataLoader for validation data.
+        test_dl:   DataLoader for test data.
+
+        epochs:       Number of training epochs.
+        patience:     Early stopping patience in epochs.
+        num_classes:  Number of output classes.
+        clip_grad_max_norm:  Max norm for gradient clipping.
+
+        best_metric:         Metric used to select the best model checkpoint.
+        best_metric_mode:    Towards 'min' or 'max' // Inferred from best_metric if None.
+
+        parameters:  The training parameters in a dictionary format.
+        device:      Device string, e.g. 'cpu' or 'cuda'.
+
+        compute_train_metrics:  Whether to compute metrics on the training set.
+        save:                   Whether to save model artifacts after training.
+        parent_dir:             Directory to save model artifacts.
+        run_name:               Optional name for the run.
+            
+        extra_config:  Optional dict of additional config keys to merge.
 
     Returns:
         Run summary dictionary with history, best epoch, and best metric value.
@@ -109,29 +130,40 @@ def training(
     # This keeps the function signatures clean and makes it easy to add new parameters without needing to change a lot of function signatures.
     train_config = _build_train_config(
         model=model,
+        energy_model=energy_model,
+        model_type=model_type,
+        need_length=need_length,
+        #
+        optimiser=optimiser,
+        optimiser_args=optimiser_args,
+        #
+        scheduler=scheduler,
+        scheduler_step_per_batch=scheduler_step_per_batch,
+        #
+        criterion_type=criterion_type,
+        criterion_weights=criterion_weights,
+        criterion_args=criterion_args,
+        #
         train_dl=train_dl,
         valid_dl=valid_dl,
+        test_dl=test_dl,
+        #
         epochs=epochs,
-        device=device,
         patience=patience,
-        criterion_weights=criterion_weights,
-        model_type=model_type,
-        save=save,
-        optimiser=optimiser,
-        scheduler=scheduler,
-        criterion_type=criterion_type,
-        criterion_args=criterion_args,
-        need_length=need_length,
-        energy_model=energy_model,
+        num_classes=num_classes,
+        clip_grad_max_norm=clip_grad_max_norm,
+        #
         best_metric=best_metric,
         best_metric_mode=best_metric_mode,
-        clip_grad_max_norm=clip_grad_max_norm,
-        scheduler_step_per_batch=scheduler_step_per_batch,
+        #
+        parameters=parameters,
+        device=device,
+        #
+        compute_train_metrics=compute_train_metrics,
+        save=save,
         save_dir=save_dir,
         run_name=run_name,
-        compute_train_metrics=compute_train_metrics,
-        parameters=parameters,
-        num_classes=num_classes,
+        #
         extra_config=extra_config,
     )
 
