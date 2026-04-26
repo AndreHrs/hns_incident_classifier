@@ -13,6 +13,7 @@ from .one_epoch import train_one_epoch
 from .validation import validate
 from .run_saving import RunSaver
 from .utility import _safe_class_name, _serialise_value, _is_better
+from .evaluate import evaluate
 
 
 #  MAIN TRAINING LOOP // ensures all control variables are consistent // compatible with Dataloader-based pipelines
@@ -30,8 +31,7 @@ def train_model_loop(
         best model state dict, and total training time.
     """
     run_saver = RunSaver()
-    training_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    save_dir = run_saver.create_directory(config, training_timestamp)
+    config["save_dir"] = run_saver.create_directory(config)
 
     patience_counter = 0
     best_metric_value = None
@@ -78,6 +78,7 @@ def train_model_loop(
         )
         print("-" * 120)
 
+        # Check for improvement and update best model if needed, otherwise increment patience counter
         if _is_better(
             current_metric_value, best_metric_value, config["best_metric_mode"]
         ):
@@ -95,7 +96,12 @@ def train_model_loop(
 
     if best_model_state_dict is not None:
         config["model"].load_state_dict(best_model_state_dict)
+    
+    # Final evaluation on test set using the best model
+    test_metrics = evaluate(config)
+    run_saver.append_metrics("test", test_metrics, training=False)
 
+    # Prepare run_summary for saving
     run_summary = {
         "config": config,
         "history": run_saver.history,
@@ -108,11 +114,11 @@ def train_model_loop(
 
     if config["save"] and best_model_state_dict is not None:
         model_path, summary_path = run_saver.save_artifacts(
-            config, run_summary, save_dir
+            config, run_summary
         )
-        run_saver.plot_history(best_epoch, save_dir, config["save_name"])
+        run_saver.plot_history(best_epoch, config["save_dir"], config["save_name"])
 
-        print(f"Run saved to: {save_dir}")
+        print(f"Run saved to: {config['save_dir']}")
         print(f"Total training time: {total_train_time:.4f}s")
         print(f"Best epoch: {best_epoch}")
         print(f"Best {config['best_metric']}: {best_metric_value:.6f}")

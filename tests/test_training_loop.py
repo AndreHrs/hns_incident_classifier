@@ -77,6 +77,14 @@ def _make_config(model, need_length=False, energy_model=False):
     }
 
 
+# A module-level fixture or variable
+@pytest.fixture
+def config():
+    return {
+        "num_classes": None,  # Will be set per test
+    }
+
+
 # ── _is_better ────────────────────────────────────────────────────────────────
 
 
@@ -136,22 +144,34 @@ class TestSerialiseValue:
 # ── _compute_classification_metrics ──────────────────────────────────────────
 
 
+
+@pytest.fixture
+def config():
+    return {
+        "num_classes": 3,
+        "class_dict": {},
+        "threshold": 0.80,
+    }
+
 class TestComputeClassificationMetrics:
-    def test_perfect_predictions(self):
+    def test_perfect_predictions(self, config):
         y = torch.tensor([0, 1, 2, 0, 1, 2])
-        metrics = _compute_classification_metrics(y, y, num_classes=3)
+        config["num_classes"] = 3
+        metrics = _compute_classification_metrics(y, y, config)
         assert metrics["accuracy"] == pytest.approx(1.0, abs=1e-5)
         assert metrics["f1_macro"] == pytest.approx(1.0, abs=1e-5)
 
-    def test_all_wrong_accuracy_zero(self):
+    def test_all_wrong_accuracy_zero(self, config):
         y_true = torch.tensor([0, 0, 0])
         y_pred = torch.tensor([1, 1, 1])
-        metrics = _compute_classification_metrics(y_true, y_pred, num_classes=2)
+        config["num_classes"] = 2
+        metrics = _compute_classification_metrics(y_true, y_pred, config)
         assert metrics["accuracy"] == pytest.approx(0.0, abs=1e-5)
 
-    def test_returns_expected_keys(self):
+    def test_returns_expected_keys(self, config):
         y = torch.tensor([0, 1])
-        metrics = _compute_classification_metrics(y, y)
+        config["num_classes"] = None
+        metrics = _compute_classification_metrics(y, y, config)
         expected = {
             "accuracy",
             "precision_macro",
@@ -160,22 +180,24 @@ class TestComputeClassificationMetrics:
             "precision_weighted",
             "recall_weighted",
             "f1_weighted",
-            "f1_per_class",
+            "class_metrics",
             "confusion_matrix",
         }
         assert set(metrics.keys()) == expected
 
-    def test_empty_input_returns_zeros(self):
-        metrics = _compute_classification_metrics(torch.tensor([]), torch.tensor([]))
+    def test_empty_input_returns_zeros(self, config):
+        config["num_classes"] = None
+        metrics = _compute_classification_metrics(torch.tensor([]), torch.tensor([]), config)
         numeric_keys = ["accuracy", "precision_macro", "recall_macro", "f1_macro",
                     "precision_weighted", "recall_weighted", "f1_weighted"]
         assert all(metrics[k] == 0.0 for k in numeric_keys)
-        assert metrics["f1_per_class"] == []
+        assert metrics["class_metrics"] == {}
         assert metrics["confusion_matrix"] == []
 
-    def test_infers_num_classes(self):
+    def test_infers_num_classes(self, config):
         y = torch.tensor([0, 1, 2])
-        metrics = _compute_classification_metrics(y, y)  # num_classes not passed
+        config["num_classes"] = None
+        metrics = _compute_classification_metrics(y, y, config)  # num_classes not passed
         assert metrics["accuracy"] == pytest.approx(1.0, abs=1e-5)
 
 
