@@ -57,7 +57,7 @@ def _build_row(run_summary: dict, config: dict, model_path: str, leaderboard_dir
     """
     history = run_summary.get("history", {})
     best_epoch = run_summary.get("best_epoch") or 1
-    val_history = history.get("val", {})
+    val_history = history.get("training", {}).get("val", {})
     idx = best_epoch - 1  # history is 0-indexed
 
     def _at_best(metric):
