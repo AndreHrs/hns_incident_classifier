@@ -23,6 +23,14 @@ print(df.columns)
 ## Need to install contractions. Need to list this!
 # %pip install contractions
 
+# %% [markdown]
+# ## Notes
+# Please do not that this is residual code.
+# I start experimenting and rapidly prototype on .ipynb then after it is fixed and complete only then I move it to external module.
+#
+# Exercise caution on using these code as references
+#
+
 # %%
 from modules import OneTextPreProcessor
 
@@ -31,45 +39,6 @@ import json
 # Open and read the file
 with open('column_map.json', 'r') as file:
     column_map = json.load(file)
-
-# oneTextPreProcessor = OneTextPreProcessor(keep_numbers=True, column_map=column_map)
-# mod_df = oneTextPreProcessor.pre_process_df(df, column_map["Detailed Description of Event"])
-# mod_df
-
-# %%
-# oneTextPreProcessor = OneTextPreProcessor(keep_numbers=False, column_map=column_map)
-# mod_df = oneTextPreProcessor.pre_process_df(df, column_map["Detailed Description of Event"])
-# mod_df
-
-# %%
-import os
-
-data_dir = "dataset"
-df_list = {}
-
-# scan and read all CSV files
-for file in os.listdir(data_dir):
-    if file.endswith(".csv"):
-        file_path = os.path.join(data_dir, file)
-        
-        df = pd.read_csv(file_path)
-        
-        # rename columns
-        df = df.rename(columns=column_map)
-        
-        df_list[file] = df
-
-def check_class_dist(df, col_name): 
-  display(df[col_name].value_counts().to_frame(name="count"))
-
-
-for (key, value) in df_list.items():
-    print(f"Class distribution for {key}")
-    print("Energy Type Distributions:")
-    check_class_dist(value, "energy_type")
-    print("Potantial Damage Distributions:")
-    check_class_dist(value, "potential_damage")
-    print("="*32)
 
 # If wanted to use spacy transformer model, set to en_core_web_trf (better result, at 11x slower tradeoff)
 lemma_config = {
@@ -116,40 +85,45 @@ label_col = "energy_type"  # or "Potential Damage" for model2
 
 train_tokenized_docs = model1_train[tokens_col].tolist()
 val_tokenized_docs   = model1_valid[tokens_col].tolist()
+test_tokenized_docs  = model1_test[tokens_col].tolist()
 
 label_enc = LabelEncoder()
 label_enc.fit(model1_train[label_col].tolist())
 
 train_labels = torch.tensor(label_enc.encode_many(model1_train[label_col].tolist()))
 val_labels   = torch.tensor(label_enc.encode_many(model1_valid[label_col].tolist()))
+test_labels  = torch.tensor(label_enc.encode_many(model1_test[label_col].tolist()))
 
 # --- TF-IDF ---
 vectorizer = TFIDFVectorizer().fit(train_tokenized_docs)
 train_vecs = vectorizer.transform(train_tokenized_docs)
 val_vecs   = vectorizer.transform(val_tokenized_docs)
+test_vecs  = vectorizer.transform(test_tokenized_docs)
 
 train_dl = build_tfidf_dataloader(train_vecs, train_labels)
 val_dl   = build_tfidf_dataloader(val_vecs, val_labels, shuffle=False)
+test_dl  = build_tfidf_dataloader(test_vecs, test_labels, shuffle=False)
 
 num_classes = label_enc.num_classes
 model = TFIDFClassifier(vocab_size=len(vectorizer.vocab), num_classes=num_classes, hidden_dim=256)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model = model.to(device)
 
-config = _build_train_config(
+results = training(
     model_type="tf_idf",
     model=model,
     train_dl=train_dl,
     valid_dl=val_dl,
+    test_dl=test_dl,
     epochs=100,
     device=device,
-    patience=12,               # required — was missing
-    criterion_weights=None,   # required — None means equal class weights
+    patience=12,
+    criterion_weights=None,
     best_metric="f1_macro",
     need_length=False,
-    energy_model=True,        # True = use Energy labels, False = Risk labels
+    energy_model=True,
+    num_classes=num_classes,
 )
-results = training(**config)
 
 # %%
 from sklearn.metrics import classification_report
