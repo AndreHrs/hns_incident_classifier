@@ -57,6 +57,8 @@ def training(
     scheduler=None,  # need to be defined outside
     criterion=None,  # need to be defined outside
     criterion_type="cross_entropy",
+    use_weighted_sampler=False,
+    train_labels=None,
     need_length=False,
     energy_model=False,
     best_metric="loss",  # must be in: "loss", "accuracy", "precision_macro", "recall_macro", "f1_macro", "precision_weighted", "recall_weighted", "f1_weighted"
@@ -85,6 +87,9 @@ def training(
         scheduler: Learning rate scheduler. Defaults to StepLR.
         criterion: Loss function. Defaults to CrossEntropyLoss.
         criterion_type: Loss function type. One of 'cross_entropy', 'focal'. Defaults to 'cross_entropy'.
+        criterion: Loss function. Defaults to CrossEntropyLoss.
+        use_weighted_sampler: If True, use WeightedRandomSampler to handle class imbalance. Defaults to False.
+        train_labels: List or tensor of training labels. Required if use_weighted_sampler is True.
         need_length: Whether the model expects sequence lengths as input.
         energy_model: If True, predict energy type; otherwise predict risk.
         best_metric: Metric used to select the best model checkpoint.
@@ -116,6 +121,8 @@ def training(
         scheduler=scheduler,
         criterion=criterion,
         criterion_type=criterion_type,
+        use_weighted_sampler=use_weighted_sampler,
+        train_labels=train_labels,
         need_length=need_length,
         energy_model=energy_model,
         best_metric=best_metric,
