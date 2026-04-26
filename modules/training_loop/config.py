@@ -13,46 +13,61 @@ from .loss import get_loss_function
 # CONFIG AND UTILITY FUNCTIONS FOR TRAINING LOOP
 def _build_train_config(
     model,
+    energy_model,
+    model_type,
+    need_length,
+    #
+    optimiser,
+    optimiser_args,
+    #
+    scheduler,
+    scheduler_step_per_batch,
+    #
+    criterion_type,
+    criterion_weights,
+    criterion_args,
+    #
     train_dl,
     valid_dl,
+    test_dl,
+    #
     epochs,
-    device,
     patience,
-    criterion_weights,
-    model_type="Simple",
-    save=True,
-    optimiser=None,
-    scheduler=None,
-    criterion=None,
-    criterion_type="cross_entropy",
-    need_length=False,
-    energy_model=False,
-    best_metric="loss",
-    best_metric_mode=None,
-    clip_grad_max_norm=1.0,
-    scheduler_step_per_batch=False,
-    save_dir="trained_models",
-    run_name=None,
-    parameters=None,
-    compute_train_metrics=False,
-    num_classes=None,
-    extra_config=None,
+    num_classes,
+    clip_grad_max_norm,
+    #
+    best_metric,
+    best_metric_mode,
+    #
+    parameters,
+    device,
+    #
+    compute_train_metrics,
+    save,
+    parent_dir,
+    run_name,
+    #
+    extra_config,
 ):
     """Build the training configuration dictionary."""
+    # Generate a timestamp for unique run identification and directory naming
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
     # DEFAULT OPTIMISER, SCHEDULER, CRITERION // Set default optimiser, scheduler, and criterion if not provided
     if optimiser is None:
-        optimiser = optim.Adam(model.parameters(), lr=1e-3)
+        lr = optimiser_args.get("lr", 1e-3) if optimiser_args else 1e-3
+        optimiser = optim.Adam(model.parameters(), lr=lr)
 
     if scheduler is None:
         scheduler = optim.lr_scheduler.StepLR(optimiser, step_size=1, gamma=0.95)
 
-    if criterion is None:
-        if criterion_weights is not None:
-            criterion_weights = criterion_weights.to(device)
-        criterion = get_loss_function(
-            criterion_type=criterion_type,
-            weight=criterion_weights,
-        )
+    # LOSS FUNCTION // Get the loss function based on the specified type and weights
+    criterion = get_loss_function(
+        criterion_type=criterion_type,
+        weight=criterion_weights,
+        criterion_args=criterion_args,
+        device=device,
+    )
 
     if best_metric not in {
         "loss",
@@ -68,9 +83,6 @@ def _build_train_config(
             f"Invalid best_metric: {best_metric}. Must be one of 'loss', 'accuracy', 'precision_macro', 'recall_macro', 'f1_macro', 'precision_weighted', 'recall_weighted', 'f1_weighted'."
         )
 
-    if parameters is None:
-        parameters = {}
-
     if best_metric_mode is None:
         # Metrics containing "loss" are minimised; everything else maximised.
         best_metric_mode = "min" if "loss" in best_metric.lower() else "max"
@@ -80,34 +92,45 @@ def _build_train_config(
         save_name = run_name.lower().replace(" ", "_")[:10]
     else:
         save_name = model_type.lower().replace(" ", "_")[:10]
+        run_name = f"{save_name}_run_{timestamp}"
 
+    # BUILD CONFIG DICTIONARY // Build the configuration dictionary with all training parameters and metadata
     config = {
         "model": model,
+        "energy_model": energy_model,
+        "model_type": model_type,
+        "need_length": need_length,
+        #
+        "optimiser": optimiser,
+        #
+        "scheduler": scheduler,
+        "scheduler_step_per_batch": scheduler_step_per_batch,
+        #
+        "criterion": criterion,
+        #
         "train_dl": train_dl,
         "valid_dl": valid_dl,
+        "test_dl": test_dl,
+        #
         "epochs": epochs,
-        "device": device,
         "patience": patience,
-        "criterion_weights": criterion_weights,
-        "criterion": criterion,
-        "criterion_type": criterion_type,
-        "optimiser": optimiser,
-        "scheduler": scheduler,
-        "model_type": model_type,
+        "num_classes": num_classes,
+        "clip_grad_max_norm": clip_grad_max_norm,
+        #
+        "compute_train_metrics": compute_train_metrics,
         "save": save,
-        "save_dir": save_dir,
+        "parent_dir": parent_dir,
         "save_name": save_name,
-        "run_name": run_name or f"{save_name}_run_{int(time.time())}",
-        "need_length": need_length,
-        "energy_model": energy_model,
+        "run_name": run_name,
+        #
         "best_metric": best_metric,
         "best_metric_mode": best_metric_mode,
-        "clip_grad_max_norm": clip_grad_max_norm,
-        "scheduler_step_per_batch": scheduler_step_per_batch,
+        #
         "parameters": parameters,
-        "compute_train_metrics": compute_train_metrics,
-        "num_classes": num_classes,
+        "device": device,
+        #
         "started_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": timestamp,
         # Useful run metadata
         "metadata": {
             "model_class": _safe_class_name(model),

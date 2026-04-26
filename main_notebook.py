@@ -32,6 +32,45 @@ import json
 with open('column_map.json', 'r') as file:
     column_map = json.load(file)
 
+# oneTextPreProcessor = OneTextPreProcessor(keep_numbers=True, column_map=column_map)
+# mod_df = oneTextPreProcessor.pre_process_df(df, column_map["Detailed Description of Event"])
+# mod_df
+
+# %%
+# oneTextPreProcessor = OneTextPreProcessor(keep_numbers=False, column_map=column_map)
+# mod_df = oneTextPreProcessor.pre_process_df(df, column_map["Detailed Description of Event"])
+# mod_df
+
+# %%
+import os
+
+data_dir = "dataset"
+df_list = {}
+
+# scan and read all CSV files
+for file in os.listdir(data_dir):
+    if file.endswith(".csv"):
+        file_path = os.path.join(data_dir, file)
+        
+        df = pd.read_csv(file_path)
+        
+        # rename columns
+        df = df.rename(columns=column_map)
+        
+        df_list[file] = df
+
+def check_class_dist(df, col_name): 
+  display(df[col_name].value_counts().to_frame(name="count"))
+
+
+for (key, value) in df_list.items():
+    print(f"Class distribution for {key}")
+    print("Energy Type Distributions:")
+    check_class_dist(value, "energy_type")
+    print("Potantial Damage Distributions:")
+    check_class_dist(value, "potential_damage")
+    print("="*32)
+
 # If wanted to use spacy transformer model, set to en_core_web_trf (better result, at 11x slower tradeoff)
 lemma_config = {
     "spacy_model": "en_core_web_sm",
