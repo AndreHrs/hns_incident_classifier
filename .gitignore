@@ -1,0 +1,13 @@
+.ipynb_checkpoints
+.venv/
+.venv-1/
+__pycache__
+ignored_dir
+main_notebook.ipynb
+dataset
+dataset/*
+trained_models
+trained_models/*
+.idea
+data_corrector.py
+leaderboard/owner.conf
