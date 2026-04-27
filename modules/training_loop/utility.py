@@ -67,14 +67,13 @@ def _serialise_value(value):
 
 def _unpack_batch(batch, config):
     """Unpack a dataloader batch and move tensors to the configured device.
-    Assumes batch structure: (D, DL, Energy, Risk) with length, or
-    (D, _, Energy, Risk) without length.
 
-    Supports:
-        1. Sequence batches: (D, DL, Energy, Risk)
-        2. BERT batches: dict with input_ids, attention_mask, label
+    Supports both sequence batches and BERT-style dictionary batches.
+
+    Sequence batches use the structure ``(D, DL, Energy, Risk)``.
+    BERT batches use keys such as ``input_ids``, ``attention_mask``,
+    optional ``token_type_ids``, and ``label``.
     """
-    
     device = config["device"]
 
     if isinstance(batch, dict):

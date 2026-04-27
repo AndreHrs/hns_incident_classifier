@@ -7,6 +7,7 @@ from modules.embedding.bert_embedding import BertEmbeddingBackend
 
 class BertClassifier(nn.Module):
     """BERT embedding backend followed by a classification head.
+    
     The classifier consists of a dropout layer and a linear layer mapping from the embedding dimension to the number of classes.
     The forward pass takes tokenized inputs (input_ids, attention_mask, token_type_ids), obtains the sentence embedding from the embedding backend, and applies the classifier to produce class logits.
     This model is designed for text classification tasks where the BERT embedding backend provides rich contextual representations of the input text, and the classifier head maps these representations to the target classes.

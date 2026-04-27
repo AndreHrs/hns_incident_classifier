@@ -5,22 +5,19 @@ import torch.nn.functional as F
 from modules.training_loop.utility import _unpack_batch
 
 def run_inference(config, dataloader=None):
-    """Run model inference on a dataset, collecting predictions and probabilities.
-    Can be called as a standalone eval step (no dataloader) or as a full inference pass that returns collected tensors for downstream metric computation.
-    
+    """Run model inference on a dataset.
+
+    Collect predictions and probabilities for downstream metric computation.
+
     Args:
-    
-        config (dict): Configuration dict containing:
-            - model: The PyTorch model to run.
-            - device: Device string (e.g. 'cpu', 'cuda').
-            - temperature (optional): Temperature for scaling logits. Default 1.0.
-            - use_temperature (optional): Whether to apply temperature scaling. Default False.
-            - test_dl (optional): Default dataloader if none passed explicitly.
-        dataloader: Dataloader to run inference on. If None, falls back to config["test_dl"]. If still None, only model.eval() is called.
-        
+        config (dict): Configuration dictionary containing model, device,
+            temperature settings, and optional test dataloader.
+        dataloader: Optional dataloader override. If None, falls back to
+            config["test_dl"]. If still None, only model.eval() is called.
+
     Returns:
-    
-        dict with keys all_preds, all_targets, all_probs, total_examples if a dataloder is available, otherwise None.
+        Dictionary with all_preds, all_targets, all_probs, and total_examples
+        if a dataloader is available; otherwise None.
     """
     model = config["model"]
     device = config.get("device", "cpu")
