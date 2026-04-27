@@ -58,7 +58,7 @@ def training(
     #
     criterion_type="cross_entropy",
     criterion_weights=None,
-    criterion_args={}, 
+    criterion_args={},
     #
     train_dl=None,
     valid_dl=None,
@@ -90,6 +90,7 @@ def training(
     extra_config=None,
     log_leaderboard=True,
     leaderboard_dir="leaderboard",
+    verbose=True,
     **_,
 ):
     """Build training config and run the full training loop.
@@ -140,6 +141,7 @@ def training(
         extra_config:  Optional dict of additional config keys to merge.
         log_leaderboard: Whether to append this run to the leaderboard CSV. Defaults to True.
         leaderboard_dir: Directory for leaderboard.csv and owner.conf. Defaults to 'leaderboard'.
+        verbose: Enable printing the training loop message. Defaults to True.
 
     Returns:
         Run summary dictionary with history, best epoch, and best metric value.
@@ -194,5 +196,6 @@ def training(
 
     train_config["log_leaderboard"] = log_leaderboard
     train_config["leaderboard_dir"] = leaderboard_dir
+    train_config["verbose"] = verbose
 
     return train_model_loop(train_config)
