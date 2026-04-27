@@ -363,5 +363,3 @@ class RunSaver:
         plot_path = Path(save_dir) / f"{save_name}_combined_metrics_plot.png"
         plt.savefig(plot_path)
         plt.close()
-
-

@@ -9,6 +9,7 @@ import torch.optim as optim
 
 from .utility import _safe_class_name
 from .loss import get_loss_function
+from datetime import datetime
 
 
 # CONFIG AND UTILITY FUNCTIONS FOR TRAINING LOOP
