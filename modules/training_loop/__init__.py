@@ -86,6 +86,8 @@ def training(
     run_name=None,
     #
     extra_config=None,
+    log_leaderboard=True,
+    leaderboard_dir="leaderboard",
     **_,
 ):
     """Build training config and run the full training loop.
@@ -132,6 +134,8 @@ def training(
         run_name:               Optional name for the run.
             
         extra_config:  Optional dict of additional config keys to merge.
+        log_leaderboard: Whether to append this run to the leaderboard CSV. Defaults to True.
+        leaderboard_dir: Directory for leaderboard.csv and owner.conf. Defaults to 'leaderboard'.
 
     Returns:
         Run summary dictionary with history, best epoch, and best metric value.
@@ -176,10 +180,13 @@ def training(
         #
         compute_train_metrics=compute_train_metrics,
         save=save,
-        save_dir=save_dir,
+        parent_dir=parent_dir,
         run_name=run_name,
         #
         extra_config=extra_config,
     )
+
+    train_config["log_leaderboard"] = log_leaderboard
+    train_config["leaderboard_dir"] = leaderboard_dir
 
     return train_model_loop(train_config)
