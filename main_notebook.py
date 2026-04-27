@@ -65,9 +65,12 @@ model1_train = pre_process("dataset/model1_train.csv")
 model1_valid = pre_process("dataset/model1_valid.csv")
 model1_test = pre_process("dataset/model1_test.csv")
 
-model2_train = pre_process("dataset/model2_train.csv")
-model2_valid = pre_process("dataset/model2_valid.csv")
-model2_test = pre_process("dataset/model2_test.csv")
+# model2_train = pre_process("dataset/model2_train.csv")
+# model2_valid = pre_process("dataset/model2_valid.csv")
+# model2_test = pre_process("dataset/model2_test.csv")
+
+# %%
+model1_train["energy_type"].value_counts()
 
 # %%
 tokens_col = f"description_tokens_lemma"
@@ -123,6 +126,12 @@ results = training(
     need_length=False,
     energy_model=True,
     num_classes=num_classes,
+    requirements={
+        "confidence_threshold": {"high": 0.80, "medium": 0.50},
+        "high_threshold": 0.70,
+        "fatal_accuracy": 0.95,
+        "f1_target": {5: 0.70, 6: 0.70, 11: 0.70, 17: 0.70, 0:0.0}, # Class 0 (Animal) no target
+    }
 )
 
 # %%
