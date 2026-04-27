@@ -61,5 +61,20 @@ What we *can* report from the **best runs above** (these are logged per-run in `
 
 Note: Optuna also searches over `hidden_dim` (and other items), but `hidden_dim` is not currently recorded in `leaderboard/leaderboard.csv`. If needed, we should either (a) re-run the Optuna cell to re-print `best_params`, or (b) log `hidden_dim` into the leaderboard for each TF‑IDF run.
 
-## Next Step
-Compare whether embedding from SafetyBERT improves the performance or not
+# What did not work
+## Using Transform Average Weighting did not work
+By using doc_vec = sum(tfidf_score(word) * embed(word) for word in doc) / sum(tfidf_score(word) for word in doc)
+it results in all entries have the same embedding, possibly because IDF collapses document-level variance.
+Following are captured
+```
+len(vectorizer.vocab) 2156
+E.shape torch.Size([2156, 768])
+E.sum tensor(-36086.6562)
+E.std tensor(0.0360)
+E.train_vecs[:5] tensor([[-0.0219, -0.0628, -0.0251,  ..., -0.0168, -0.0525, -0.0081],
+        [-0.0219, -0.0628, -0.0251,  ..., -0.0168, -0.0525, -0.0081],
+        [-0.0219, -0.0628, -0.0251,  ..., -0.0168, -0.0525, -0.0081],
+        [-0.0219, -0.0628, -0.0251,  ..., -0.0168, -0.0525, -0.0081],
+        [-0.0219, -0.0628, -0.0251,  ..., -0.0168, -0.0525, -0.0081]]) <== All have same embedding
+Train vecs dim tensor(2.8667e-09) <== Very close to 10
+```

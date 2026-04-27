@@ -187,16 +187,45 @@ def tf_idf_train(
     cfg = {**_TFIDF_TRAIN_DEFAULTS, **(train_config or {})}
 
     vectorizer = TFIDFVectorizer().fit(train_tokenized_docs)
-    train_vecs = vectorizer.transform(train_tokenized_docs)
-    val_vecs   = vectorizer.transform(val_tokenized_docs)
-    test_vecs  = vectorizer.transform(test_tokenized_docs)
+
+    feature_representation = cfg.pop("feature_representation", "tfidf")
+    embedding_model_name = cfg.pop("embedding_model_name", "adanish91/safetybert")
+
+    if feature_representation == "tfidf":
+        train_vecs = vectorizer.transform(train_tokenized_docs)
+        val_vecs   = vectorizer.transform(val_tokenized_docs)
+        test_vecs  = vectorizer.transform(test_tokenized_docs)
+        input_dim = len(vectorizer.vocab)
+    elif feature_representation == "tfidf_embed_avg":
+        print("Use SafetyBERT")
+        # TF-IDF-weighted average of SafetyBERT static input embeddings.
+        # This keeps the rest of the training pipeline unchanged (dense vectors
+        # go through the same dataloader and the same TFIDFClassifier).
+        from modules.embedding.safety_bert_static import get_safety_bert_embedding_matrix
+
+        E = get_safety_bert_embedding_matrix(vectorizer.vocab, model_name=embedding_model_name, verbose=False)
+        train_vecs = vectorizer.transform_weighted_average_embeddings(train_tokenized_docs, embedding_matrix=E)
+        val_vecs   = vectorizer.transform_weighted_average_embeddings(val_tokenized_docs,   embedding_matrix=E)
+        test_vecs  = vectorizer.transform_weighted_average_embeddings(test_tokenized_docs,  embedding_matrix=E)
+        input_dim = int(train_vecs.shape[1])
+        print("len(vectorizer.vocab)", len(vectorizer.vocab))
+        print("E.shape", E.shape) 
+        print("E.sum", E.sum()) 
+        print("E.std", E.std())
+        print("E.train_vecs[:5]", train_vecs[:5])
+        print("Train vecs dim", train_vecs.std(dim=0).mean())
+    else:
+        raise ValueError(
+            f"Unknown feature_representation={feature_representation!r}. "
+            "Expected 'tfidf' or 'tfidf_embed_avg'."
+        )
 
     train_dl = build_tfidf_dataloader(train_vecs, train_labels)
     val_dl   = build_tfidf_dataloader(val_vecs, val_labels, shuffle=False)
     test_dl  = build_tfidf_dataloader(test_vecs, test_labels, shuffle=False)
 
     num_classes = label_enc.num_classes
-    model  = TFIDFClassifier(vocab_size=len(vectorizer.vocab), num_classes=num_classes, hidden_dim=cfg.pop("hidden_dim", 256))
+    model  = TFIDFClassifier(vocab_size=input_dim, num_classes=num_classes, hidden_dim=cfg.pop("hidden_dim", 256))
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model  = model.to(device)
 
@@ -360,6 +389,9 @@ def tf_idf_hparam_search(
             "save": True,
             "log_leaderboard": True,
             "verbose": False,
+            # Added for test with safety bert
+            # "feature_representation": "tfidf_embed_avg",
+            # "embedding_model_name": "adanish91/safetybert",
         }
         result = tf_idf_train(*encoded, train_config=cfg)
         return result["best_metric_value"]
