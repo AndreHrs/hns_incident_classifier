@@ -65,7 +65,10 @@ def _build_train_config(
         lr = optimiser_args.get("lr", 1e-3) if optimiser_args else 1e-3
         optimiser = optim.Adam(model.parameters(), lr=lr)
 
-    if scheduler is None:
+    # False means "no scheduler" (explicit opt-out); None means "use default"
+    if scheduler is False:
+        scheduler = None
+    elif scheduler is None:
         scheduler = optim.lr_scheduler.StepLR(optimiser, step_size=1, gamma=0.95)
 
     # LOSS FUNCTION // Get the loss function based on the specified type and weights
