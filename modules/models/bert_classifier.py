@@ -27,7 +27,8 @@ class BertClassifier(nn.Module):
         :param num_classes: Number of target classes for classification.
         :type num_classes: int
         :param dropout: Dropout rate for the classifier.
-        :type dropout: float"""
+        :type dropout: float
+        """
         super().__init__()
         self.embedding_backend = embedding_backend
         self.classifier = nn.Sequential(
