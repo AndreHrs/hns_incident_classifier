@@ -14,6 +14,7 @@ from .validation import validate
 from .run_saving import RunSaver
 from .utility import _safe_class_name, _serialise_value, _is_better
 from .evaluate import evaluate
+from ..leaderboard import log_run
 
 
 #  MAIN TRAINING LOOP // ensures all control variables are consistent // compatible with Dataloader-based pipelines
@@ -57,7 +58,7 @@ def train_model_loop(
         if config["scheduler"] is not None and not config["scheduler_step_per_batch"]:
             config["scheduler"].step()
 
-        run_saver.history["epoch_time_sec"].append(time.time() - epoch_start_time)
+        run_saver.history["training"]["epoch_time_sec"].append(time.time() - epoch_start_time)
 
         run_saver.append_metrics("train", train_metrics)
         run_saver.append_metrics("val", val_metrics)
@@ -67,7 +68,7 @@ def train_model_loop(
         print("-" * 120)
         print(
             f"| Epoch {epoch:03d} "
-            f"| Time: {run_saver.history['epoch_time_sec'][-1]:7.2f}s "
+            f"| Time: {run_saver.history['training']['epoch_time_sec'][-1]:7.2f}s "
             f"| Train Loss: {train_metrics['loss']:.4f} "
             f"| Train Acc: {train_metrics['accuracy'] * 100:.2f}% "
             f"| Val Loss: {val_metrics['loss']:.4f} "
@@ -117,6 +118,14 @@ def train_model_loop(
             config, run_summary
         )
         run_saver.plot_history(best_epoch, config["save_dir"], config["save_name"])
+
+        if config.get("log_leaderboard", True):
+            log_run(
+                run_summary=run_summary,
+                config=config,
+                model_path=model_path,
+                leaderboard_dir=config.get("leaderboard_dir", "leaderboard"),
+            )
 
         print(f"Run saved to: {config['save_dir']}")
         print(f"Total training time: {total_train_time:.4f}s")
