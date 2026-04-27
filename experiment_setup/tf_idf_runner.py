@@ -197,7 +197,7 @@ def tf_idf_train(
         test_vecs  = vectorizer.transform(test_tokenized_docs)
         input_dim = len(vectorizer.vocab)
     elif feature_representation == "tfidf_embed_avg":
-        print("Use SafetyBERT")
+        print("Use SafetyBERT on raw")
         # TF-IDF-weighted average of SafetyBERT static input embeddings.
         # This keeps the rest of the training pipeline unchanged (dense vectors
         # go through the same dataloader and the same TFIDFClassifier).

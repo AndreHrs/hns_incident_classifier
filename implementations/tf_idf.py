@@ -127,7 +127,12 @@ class TFIDFVectorizer:
                 weighted_sum += embedding_matrix[v_idx] * w
                 weight_total += w
 
-            out[doc_id] = weighted_sum / max(weight_total, eps)
+            # # Using IDF did not work:
+            # out[doc_id] = weighted_sum / max(weight_total, eps)
+            # # L2 Norm did not work
+            # norm = weighted_sum.norm(p=2)
+            # out[doc_id] = weighted_sum / max(float(norm), eps)
+            out[doc_id] = weighted_sum
 
         return out
 

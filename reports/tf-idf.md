@@ -61,11 +61,11 @@ What we *can* report from the **best runs above** (these are logged per-run in `
 
 Note: Optuna also searches over `hidden_dim` (and other items), but `hidden_dim` is not currently recorded in `leaderboard/leaderboard.csv`. If needed, we should either (a) re-run the Optuna cell to re-print `best_params`, or (b) log `hidden_dim` into the leaderboard for each TF‑IDF run.
 
-# What did not work
-## Using Transform Average Weighting did not work
+# Negative Results
+## Using Transform Average Weighting and L2 Normalization did not work
 By using doc_vec = sum(tfidf_score(word) * embed(word) for word in doc) / sum(tfidf_score(word) for word in doc)
 it results in all entries have the same embedding, possibly because IDF collapses document-level variance.
-Following are captured
+Following are captured:
 ```
 len(vectorizer.vocab) 2156
 E.shape torch.Size([2156, 768])
@@ -77,4 +77,32 @@ E.train_vecs[:5] tensor([[-0.0219, -0.0628, -0.0251,  ..., -0.0168, -0.0525, -0.
         [-0.0219, -0.0628, -0.0251,  ..., -0.0168, -0.0525, -0.0081],
         [-0.0219, -0.0628, -0.0251,  ..., -0.0168, -0.0525, -0.0081]]) <== All have same embedding
 Train vecs dim tensor(2.8667e-09) <== Very close to 10
+```
+
+Same issue happened when doing L2 Norm
+
+## Using Raw Value from static embedding also did not work
+While the value is no longer all the same
+```
+len(vectorizer.vocab) 2156
+E.shape torch.Size([2156, 768])
+E.sum tensor(-36086.6562)
+E.std tensor(0.0360)
+E.train_vecs[:5] tensor([[-0.0920, -0.2636, -0.1055,  ..., -0.0705, -0.2204, -0.0341],
+        [-0.0917, -0.2629, -0.1052,  ..., -0.0703, -0.2198, -0.0340],
+        [-0.0898, -0.2574, -0.1030,  ..., -0.0689, -0.2152, -0.0333],
+        [-0.0965, -0.2764, -0.1106,  ..., -0.0739, -0.2311, -0.0358],
+        [-0.0718, -0.2058, -0.0824,  ..., -0.0551, -0.1721, -0.0266]])
+Train vecs dim tensor(0.0135)
+```
+
+The result is just very bad, with `Best f1_macro: 0.034906` and the model only predicts 2 classes out of all the classes.
+
+Consulting with Claude gave this result:
+```
+It's the architecture mismatch. You're trying to use a TFIDFClassifier (a simple 2-layer feedforward net) on static averaged BERT embeddings — and that combination has a core tension:
+
+Static embeddings from SafetyBERT are contextual by design — they're meant to be used with a sequence model like your Bi-GRU, not averaged into a single vector and fed into a linear layer
+Averaging 768-dim vectors across all tokens in a document inherently destroys the positional and contextual information that makes BERT embeddings useful
+The TFIDFClassifier is simply too shallow to recover signal from such a compressed representation
 ```

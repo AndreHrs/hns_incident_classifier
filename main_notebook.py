@@ -78,21 +78,6 @@ models = tf_idf_run_multiple(
     train_config=tfidf_train_config,
 )
 
-# Optional variant: TF-IDF-weighted SafetyBERT static embeddings.
-# Keeps the TF-IDF runner intact; only switches the feature representation.
-tfidf_safetybert_train_config = {
-    **tfidf_train_config,
-    "feature_representation": "tfidf_embed_avg",
-    "embedding_model_name": "adanish91/safetybert",
-}
-
-safetybert_models = tf_idf_run_multiple(
-    train_df, valid_df, test_df, text_col,
-    keep_numbers=False, lemma_config=lemma_config,
-    energy_model=True, n=5,
-    train_config=tfidf_safetybert_train_config,
-)
-
 # %%
 # models
 
