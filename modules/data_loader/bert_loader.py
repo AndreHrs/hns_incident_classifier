@@ -5,21 +5,31 @@ from torch.utils.data import Dataset, DataLoader
 
 
 class BertTextDataset(Dataset):
-    """
-    Dataset for BERT text classification.
+    """Dataset for BERT text classification.
     
     returns tokenized inputs and labels for each text sample.
     """
 
     def __init__(self, texts, labels, tokenizer_wrapper):
+        """Initialize the dataset with raw texts, labels, and a tokenizer wrapper.
+        
+        :param texts: List of raw text samples.
+        :type texts: list[str]
+        :param labels: List of corresponding label ids.
+        :type labels: list[int]
+        :param tokenizer_wrapper: Tokenizer wrapper for encoding text.
+        :type tokenizer_wrapper: BertTokenizerWrapper
+        """
         self.texts = list(texts)
         self.labels = list(labels)
         self.tokenizer_wrapper = tokenizer_wrapper
 
     def __len__(self):
+        """Return the number of samples in the dataset."""
         return len(self.texts)
 
     def __getitem__(self, idx):
+        """Return the tokenized inputs and label for the sample at index `idx`."""
         encoded = self.tokenizer_wrapper.encode_texts([self.texts[idx]])
 
         item = {
@@ -42,8 +52,7 @@ def df_to_bert_dataloader(
     batch_size: int,
     shuffle: bool = True,
 ):
-    """
-    Convert dataframe text and labels into a BERT-compatible DataLoader.
+    """Convert dataframe text and labels into a BERT-compatible DataLoader.
     
     :param df: Input dataframe containing text and label columns.
     :type df: pandas.DataFrame

@@ -74,6 +74,7 @@ def _unpack_batch(batch, config):
         1. Sequence batches: (D, DL, Energy, Risk)
         2. BERT batches: dict with input_ids, attention_mask, label
     """
+    
     device = config["device"]
 
     if isinstance(batch, dict):

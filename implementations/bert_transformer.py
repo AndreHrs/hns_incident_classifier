@@ -16,8 +16,7 @@ from modules.training_loop.evaluate import evaluate
 
 
 def encode_label_column(train_df, valid_df, test_df, label_col):
-    """
-    Fit label encoder on train labels and transform train/valid/test.
+    """Fit label encoder on train labels and transform train/valid/test.
     
     :param train_df: Training dataframe containing the label column.
     :type train_df: pandas.DataFrame
@@ -68,8 +67,7 @@ def run_bert_experiment(
     weight_decay=0.01,
     threshold=0.8,
 ):
-    """
-    Train and evaluate a BERT classifier for one target label.
+    """Train and evaluate a BERT classifier for one target label.
     
     :param train_df: Training dataframe.
     :type train_df: pandas.DataFrame
