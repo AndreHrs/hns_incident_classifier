@@ -63,6 +63,8 @@ def training(
     train_dl=None,
     valid_dl=None,
     test_dl=None,
+    use_weighted_sampler=False,
+    train_labels=None,
     #
     epochs=10,
     patience=3,
@@ -112,6 +114,8 @@ def training(
         train_dl:  DataLoader for training data.
         valid_dl:  DataLoader for validation data.
         test_dl:   DataLoader for test data.
+        use_weighted_sampler: If True, use WeightedRandomSampler to handle class imbalance. Defaults to False.
+        train_labels: List or tensor of training labels. Required if use_weighted_sampler is True.
 
         epochs:              Number of training epochs.
         patience:            Early stopping patience in epochs.
@@ -163,6 +167,8 @@ def training(
         train_dl=train_dl,
         valid_dl=valid_dl,
         test_dl=test_dl,
+        use_weighted_sampler=use_weighted_sampler,
+        train_labels=train_labels,
         #
         epochs=epochs,
         patience=patience,
