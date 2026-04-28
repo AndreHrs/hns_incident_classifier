@@ -5,6 +5,7 @@ New columns from future runs are merged in; old rows keep NaN for any
 columns that didn't exist when they were written.
 """
 
+import json
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -130,6 +131,7 @@ def _build_row(run_summary: dict, config: dict, model_path: str, leaderboard_dir
         "test_fatal_accuracy": _last_test("fatal_accuracy"),
         "req_fatal_accuracy_met": _last_test("req_fatal_accuracy_met"),
         "req_all_f1_targets_met": _last_test("req_all_f1_targets_met"),
+        "per_class_requirements": json.dumps(_last_test("per_class_requirements")),
     }
 
 

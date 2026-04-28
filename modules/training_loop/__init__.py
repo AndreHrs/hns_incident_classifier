@@ -88,7 +88,7 @@ def training(
     run_name=None,
     #
     extra_config=None,
-    requirements=None,
+    requirements={},
     log_leaderboard=True,
     leaderboard_dir="leaderboard",
     verbose=True,
@@ -140,7 +140,8 @@ def training(
         run_name:               Optional name for the run.
             
         extra_config:  Optional dict of additional config keys to merge.
-        requirements:  Optional client performance requirements dict. Keys:
+        requirements:  Optional client performance requirements dict, defaults to {}. 
+            Pass None to disable check. Keys:
             - confidence_threshold: {"high": float, "medium": float} (values >1 treated as %)
             - high_threshold: min fraction of predictions in high-confidence tier (default 0.70)
             - fatal_accuracy: min recall on true fatal-class samples (default 0.95)

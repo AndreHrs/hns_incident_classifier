@@ -12,6 +12,15 @@ from modules.inference import run_inference
 
 FATAL_CLASSES = ["Single Fatality", "Multiple Fatality"]
 
+_DEFAULT_REQUIREMENTS_PATH = Path(__file__).parents[2] / "config_requirement_check.json"
+
+
+def _load_default_requirements():
+    if _DEFAULT_REQUIREMENTS_PATH.exists():
+        with open(_DEFAULT_REQUIREMENTS_PATH) as f:
+            return json.load(f)
+    return {}
+
 
 def _normalise_threshold(value):
     """Convert percentage (>1) to fraction; leave fractions unchanged."""
@@ -21,7 +30,7 @@ def _normalise_threshold(value):
 def _check_requirements(all_targets, all_probs, all_preds, metrics, config):
     """Check whether the model meets each client performance requirement.
 
-    Reads the optional ``requirements`` key from config with the shape::
+    Reads the ``requirements`` key from config with the shape::
 
         {
             "confidence_threshold": {"high": 0.80, "medium": 0.50},
@@ -33,11 +42,14 @@ def _check_requirements(all_targets, all_probs, all_preds, metrics, config):
     Threshold values > 1 are treated as percentages and normalised to [0, 1].
 
     Returns:
-        Flat dict of requirement results, or empty dict if no requirements configured.
+        Flat dict of requirement results, or empty dict if ``requirements`` is None.
     """
     requirements = config.get("requirements", {})
-    if not requirements:
+    if requirements is None:
         return {}
+
+    defaults = _load_default_requirements()
+    requirements = {**defaults, **requirements}
 
     result = {}
     n = max(len(all_probs), 1)
@@ -126,7 +138,7 @@ def evaluate(config):
             - threshold: Confidence threshold for auto-classification. Defaults to 0.80.
             - temperature: Temperature value for scaling logits. Defaults to 1.5.
             - use_temperature: Whether to use temperature scaling. Defaults to True.
-            - requirements (optional): Client performance requirements dict with keys:
+            - requirements: Client performance requirements dict with keys:
                 - confidence_threshold: {"high": float, "medium": float}
                 - high_threshold: min fraction in high-confidence tier (default 0.70)
                 - fatal_accuracy: min recall on true fatal samples (default 0.95)
