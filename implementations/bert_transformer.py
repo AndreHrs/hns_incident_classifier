@@ -66,6 +66,8 @@ def run_bert_experiment(
     use_class_weights=False,
     weight_decay=0.01,
     threshold=0.8,
+    model_name="bert-base-uncased",
+    tokenizer_name=None,
 ):
     """Train and evaluate a BERT classifier for one target label.
     
@@ -114,6 +116,7 @@ def run_bert_experiment(
 
     bert_config = BertEmbeddingConfig(
         model_name="bert-base-uncased",
+        tokenizer_name=tokenizer_name,
         max_length=max_length,
         dropout=0.1,
         pooling=pooling,
@@ -219,6 +222,8 @@ def run_bert_experiment(
             "max_length": max_length,
             "use_class_weights": use_class_weights,
             "weight_decay": weight_decay,
+            "model_name": model_name,
+            "tokenizer_name": tokenizer_name,
         },
         device=device,
 
