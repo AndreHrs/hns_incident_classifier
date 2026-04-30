@@ -8,7 +8,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.19.1
 #   kernelspec:
-#     display_name: torch-rocm
+#     display_name: nlp
 #     language: python
 #     name: python3
 # ---
@@ -308,3 +308,122 @@ for true_cls, pred_cls in review_pairs:
 flagged_df = pd.concat(flagged_rows).drop_duplicates(subset='reference')
 flagged_df.to_csv("labelling_review_flagged.csv", index=False)
 print(f"Exported {len(flagged_df)} flagged cases to labelling_review_flagged.csv")
+
+# %% [markdown]
+# ## New Section
+
+# %%
+import torch
+from implementations.simple_bi_gru import BiGRUClassifier, build_bigru_dataloader
+from modules.training_loop import training
+from modules.encoding import LabelEncoder
+from modules.encoding.vocab_encoder import VocabEncoder
+from modules.encoding.sequence_encoder import SequenceEncoder
+
+tokens_col = "description_tokens_lemma"
+
+train_tokenized_docs = model1_train[tokens_col].tolist()
+val_tokenized_docs   = model1_valid[tokens_col].tolist()
+test_tokenized_docs  = model1_test[tokens_col].tolist()
+
+
+# %%
+# Build vocab on training set only (min_freq=2 filters noise)
+vocab_enc = VocabEncoder(min_freq=2)
+vocab_enc.fit(train_tokenized_docs)
+
+# Determine max_len from training set (95th percentile avoids outlier padding)
+import numpy as np
+train_lens_raw = [len(doc) for doc in train_tokenized_docs]
+max_len = int(np.percentile(train_lens_raw, 95))
+print(f"vocab_size={vocab_enc.vocab_size}, max_len={max_len}")
+
+seq_enc = SequenceEncoder(vocab_enc, max_length=max_len)
+
+def encode_split(docs):
+    seqs    = torch.tensor(seq_enc.encode_sequences(docs), dtype=torch.long)
+    lengths = torch.tensor([min(len(d), max_len) for d in docs], dtype=torch.long)
+    return seqs, lengths
+
+train_seqs, train_lengths = encode_split(train_tokenized_docs)
+val_seqs,   val_lengths   = encode_split(val_tokenized_docs)
+test_seqs,  test_lengths  = encode_split(test_tokenized_docs)
+
+
+# %%
+# Energy type labels
+energy_enc = LabelEncoder()
+energy_enc.fit(model1_train["energy_type"].tolist())
+train_energy = torch.tensor(energy_enc.encode_many(model1_train["energy_type"].tolist()))
+val_energy   = torch.tensor(energy_enc.encode_many(model1_valid["energy_type"].tolist()))
+test_energy  = torch.tensor(energy_enc.encode_many(model1_test["energy_type"].tolist()))
+
+# Potential damage labels
+damage_enc = LabelEncoder()
+damage_enc.fit(model1_train["potential_damage"].tolist())
+train_damage = torch.tensor(damage_enc.encode_many(model1_train["potential_damage"].tolist()))
+val_damage   = torch.tensor(damage_enc.encode_many(model1_valid["potential_damage"].tolist()))
+test_damage  = torch.tensor(damage_enc.encode_many(model1_test["potential_damage"].tolist()))
+
+
+# %%
+train_dl = build_bigru_dataloader(train_seqs, train_lengths, train_energy, train_damage)
+val_dl   = build_bigru_dataloader(val_seqs,   val_lengths,   val_energy,   val_damage,   shuffle=False)
+test_dl  = build_bigru_dataloader(test_seqs,  test_lengths,  test_energy,  test_damage,  shuffle=False)
+
+
+# %%
+device = "cuda" if torch.cuda.is_available() else "cpu"
+num_classes = energy_enc.num_classes
+
+model = BiGRUClassifier(
+    vocab_size=vocab_enc.vocab_size,
+    embedding_dim=128,
+    hidden_dim=128,
+    num_classes=num_classes,
+).to(device)
+
+results = training(
+    model_type="bigru",
+    model=model,
+    train_dl=train_dl,
+    valid_dl=val_dl,
+    test_dl=test_dl,
+    epochs=50,
+    device=device,
+    patience=10,
+    best_metric="f1_macro",
+    criterion_type="focal",
+    need_length=True,   # tells the loop to call model(D, DL)
+    energy_model=True,  # set False to predict potential_damage instead
+    num_classes=num_classes,
+)
+
+
+# %%
+device = "cuda" if torch.cuda.is_available() else "cpu"
+num_classes = energy_enc.num_classes
+
+model = BiGRUClassifier(
+    vocab_size=vocab_enc.vocab_size,
+    embedding_dim=128,
+    hidden_dim=128,
+    num_classes=num_classes,
+).to(device)
+
+results = training(
+    model_type="bigru",
+    model=model,
+    train_dl=train_dl,
+    valid_dl=val_dl,
+    test_dl=test_dl,
+    epochs=50,
+    device=device,
+    patience=10,
+    best_metric="f1_macro",
+    criterion_type="focal",
+    need_length=True,   # tells the loop to call model(D, DL)
+    energy_model=False,  # set False to predict potential_damage instead
+    num_classes=num_classes,
+)
+
