@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from collections import Counter
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import Dataset, DataLoader
 
 
 class TFIDFVectorizer:
@@ -106,6 +106,18 @@ class TFIDFClassifier(nn.Module):
         return self.net(x.float())
 
 
+class _TFIDFDataset(Dataset):
+    def __init__(self, tfidf_vectors: torch.Tensor, labels: torch.Tensor):
+        self.tfidf_vectors = tfidf_vectors
+        self.labels = labels
+
+    def __len__(self):
+        return len(self.labels)
+
+    def __getitem__(self, idx):
+        return {"input_ids": self.tfidf_vectors[idx], "label": self.labels[idx]}
+
+
 def build_tfidf_dataloader(
     tfidf_vectors: torch.Tensor,
     labels: torch.Tensor,
@@ -114,9 +126,8 @@ def build_tfidf_dataloader(
 ) -> DataLoader:
     """Wraps TF-IDF vectors and labels in a DataLoader.
 
-    Produces batches in the ``(D, DL, Energy, Risk)`` format expected by the
-    shared training loop. The ``DL`` and ``Energy`` slots are filled with
-    zero-valued placeholder tensors.
+    Returns dict-style batches with keys ``input_ids`` and ``label``,
+    compatible with the ``_unpack_batch`` dict branch in the training loop.
 
     Args:
         tfidf_vectors: Float tensor of shape ``(num_samples, vocab_size)``
@@ -127,9 +138,7 @@ def build_tfidf_dataloader(
         shuffle: Whether to shuffle the dataset each epoch. Defaults to True.
 
     Returns:
-        A DataLoader yielding 4-tuples of
-        ``(tfidf_vectors, dummy_dl, labels, dummy_energy)``.
+        A DataLoader yielding dicts of ``{"input_ids": ..., "label": ...}``.
     """
-    dummy = torch.zeros(len(tfidf_vectors), dtype=torch.long)  # placeholder DL
-    dataset = TensorDataset(tfidf_vectors, dummy, labels, dummy)
+    dataset = _TFIDFDataset(tfidf_vectors, labels)
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
