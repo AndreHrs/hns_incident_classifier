@@ -48,11 +48,6 @@ lemma_config = {
 # %%
 import torch
 from experiment_setup.tf_idf_runner import tf_idf_run_multiple, tf_idf_hparam_search
-# oneTextPreProcessor = OneTextPreProcessor(keep_numbers=True, column_map=column_map, lemmatize=True, lemma_config=lemma_config)
-# mod_df = oneTextPreProcessor.pre_process_df(df, column_map["Detailed Description of Event"])
-# mod_df
-
-# %%
 def pre_process(data_path):
     oneTextPreProcessor = OneTextPreProcessor(keep_numbers=False, column_map=column_map)
     proc_df = oneTextPreProcessor.pre_process_df(
@@ -72,17 +67,33 @@ model1_test = pre_process("dataset/model1_test.csv")
 # %%
 model1_train["energy_type"].value_counts()
 
-# %%
-tokens_col = f"description_tokens_lemma"
+train_df = pd.read_csv("dataset/model1_train.csv")
+valid_df = pd.read_csv("dataset/model1_valid.csv")
+test_df = pd.read_csv("dataset/model1_test.csv")
 
-# %%
-from implementations.tf_idf import TFIDFClassifier, TFIDFVectorizer, build_tfidf_dataloader
-from modules.training_loop import _build_train_config, training
+text_col = column_map["Detailed Description of Event"]         # "description"
 
-# %%
-import torch
-from modules.encoding import LabelEncoder
+_EPOCHS = 100
 
+# Baseline: plain TF-IDF features (current default)
+tfidf_train_config = {
+    "epochs": _EPOCHS,
+    "patience": 12,
+    "best_metric": "f1_macro",
+    # Optimizer factory — receives the model after it is built inside the runner
+    "optimizer_fn": lambda model: torch.optim.Adam(model.parameters(), lr=1e-3),
+    # CosineAnnealingLR: lr decays from initial to eta_min over T_max epochs
+    "scheduler_fn": lambda opt: torch.optim.lr_scheduler.CosineAnnealingLR(
+        opt, T_max=_EPOCHS, eta_min=1e-6
+    ),
+    "scheduler_step_per_batch": False,
+}
+
+models = tf_idf_run_multiple(
+    train_df, valid_df, test_df, text_col,
+    keep_numbers=False, lemma_config=lemma_config,
+    energy_model=True, n=5,
+    train_config=tfidf_train_config,
 text_col = column_map["Detailed Description of Event"]         # "description"
 label_col = "energy_type"  # or "Potential Damage" for model2
 
@@ -147,26 +158,28 @@ test_df = pd.read_csv("dataset/model1_test.csv")
 
 text_col = column_map["Detailed Description of Event"]         # "description"
 
-# _EPOCHS = 100
-# tfidf_train_config = {
-#     "epochs": _EPOCHS,
-#     "patience": 12,
-#     "best_metric": "f1_macro",
-#     # Optimizer factory — receives the model after it is built inside the runner
-#     "optimizer_fn": lambda model: torch.optim.Adam(model.parameters(), lr=1e-3),
-#     # CosineAnnealingLR: lr decays from initial to eta_min over T_max epochs
-#     "scheduler_fn": lambda opt: torch.optim.lr_scheduler.CosineAnnealingLR(
-#         opt, T_max=_EPOCHS, eta_min=1e-6
-#     ),
-#     "scheduler_step_per_batch": False,
-# }
+_EPOCHS = 100
 
-# models = tf_idf_run_multiple(
-#     train_df, valid_df, test_df, text_col,
-#     keep_numbers=False, lemma_config=lemma_config,
-#     energy_model=True, n=5,
-#     train_config=tfidf_train_config,
-# )
+# Baseline: plain TF-IDF features (current default)
+tfidf_train_config = {
+    "epochs": _EPOCHS,
+    "patience": 12,
+    "best_metric": "f1_macro",
+    # Optimizer factory — receives the model after it is built inside the runner
+    "optimizer_fn": lambda model: torch.optim.Adam(model.parameters(), lr=1e-3),
+    # CosineAnnealingLR: lr decays from initial to eta_min over T_max epochs
+    "scheduler_fn": lambda opt: torch.optim.lr_scheduler.CosineAnnealingLR(
+        opt, T_max=_EPOCHS, eta_min=1e-6
+    ),
+    "scheduler_step_per_batch": False,
+}
+
+models = tf_idf_run_multiple(
+    train_df, valid_df, test_df, text_col,
+    keep_numbers=False, lemma_config=lemma_config,
+    energy_model=True, n=5,
+    train_config=tfidf_train_config,
+)
 
 # %%
 # models
@@ -228,6 +241,18 @@ best_models = tf_idf_run_multiple(
 # # Search for TF-IDF Potential Damage Model
 
 # %%
+train_df = pd.read_csv("dataset/model2_train.csv")
+valid_df = pd.read_csv("dataset/model2_valid.csv")
+test_df = pd.read_csv("dataset/model2_test.csv")
+
+# %%
+valid_df["Type of Potential Damage"].value_counts()
+
+# %%
+train_df = pd.read_csv("dataset/model2_train.csv")
+valid_df = pd.read_csv("dataset/model2_valid.csv")
+test_df = pd.read_csv("dataset/model2_test.csv")
+
 hparam_study = tf_idf_hparam_search(
     train_df, valid_df, test_df, text_col,
     keep_numbers=False, lemma_config=lemma_config,
@@ -272,186 +297,115 @@ best_models = tf_idf_run_multiple(
 )
 
 # %%
-values = [t.value for t in hparam_study.trials if t.value is not None]
-print(f"Unique objective values: {len(set(values))} / {len(values)}")
+from transformers import AutoTokenizer, AutoModel, AutoModelForMaskedLM
+import torch
+import numpy as np
+
+# %%
+# ── Load once, reuse for both extraction methods ──────────────────────────────
+tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+safety_bert = AutoModel.from_pretrained("adanish91/safetybert")
 
 
 # %%
-# import torch
-# from modules.encoding import LabelEncoder
+# ─────────────────────────────────────────────────────────────────────────────
+# METHOD 1: Static token embeddings  (for Bi-GRU embedding matrix init)
+# Pull the raw embedding weight matrix — shape: (vocab_size=30522, hidden=768)
+# This is a direct lookup table, no context.
+# ─────────────────────────────────────────────────────────────────────────────
+def get_embedding_matrix(vocab: dict[str, int]) -> torch.Tensor:
+    """
+    Build an embedding matrix aligned to vocabulary (NEEDS {word: index} dictionary)
 
-# text_col = column_map["Detailed Description of Event"]         # "description"
-# label_col = "energy_type"  # or "Potential Damage" for model2
+    Args:
+        vocab: {word: index} dict
 
-# train_tokenized_docs = model1_train[tokens_col].tolist()
-# val_tokenized_docs   = model1_valid[tokens_col].tolist()
-# test_tokenized_docs  = model1_test[tokens_col].tolist()
+    Returns:
+        matrix: Tensor of shape (len(vocab), 768)
+    """
+    static_embeddings = safety_bert.embeddings.word_embeddings.weight.detach()
+    # shape: (30522, 768) — one vector per BERT subword token
 
-# label_enc = LabelEncoder()
-# label_enc.fit(model1_train[label_col].tolist())
+    matrix = torch.zeros(len(vocab), 768)
+    found, oov = 0, []
 
-# train_labels = torch.tensor(label_enc.encode_many(model1_train[label_col].tolist()))
-# val_labels   = torch.tensor(label_enc.encode_many(model1_valid[label_col].tolist()))
-# test_labels  = torch.tensor(label_enc.encode_many(model1_test[label_col].tolist()))
+    for word, idx in vocab.items():
+        # BERT uses WordPiece — a word may split into multiple subword tokens
+        subword_ids = tokenizer.encode(word, add_special_tokens=False)
+        if subword_ids:
+            # Average subword embeddings to get one vector per word
+            matrix[idx] = static_embeddings[subword_ids].mean(dim=0)
+            found += 1
+        else:
+            oov.append(word)
 
-# # --- TF-IDF ---
-# vectorizer = TFIDFVectorizer().fit(train_tokenized_docs)
-# train_vecs = vectorizer.transform(train_tokenized_docs)
-# val_vecs   = vectorizer.transform(val_tokenized_docs)
-# test_vecs  = vectorizer.transform(test_tokenized_docs)
+    print(f"Coverage: {found}/{len(vocab)} words "
+          f"({100*found/len(vocab):.1f}%)")
+    if oov:
+        print(f"OOV sample: {oov[:10]}")
+    return matrix
 
-# train_dl = build_tfidf_dataloader(train_vecs, train_labels)
-# val_dl   = build_tfidf_dataloader(val_vecs, val_labels, shuffle=False)
-# test_dl  = build_tfidf_dataloader(test_vecs, test_labels, shuffle=False)
 
-# num_classes = label_enc.num_classes
-# model = TFIDFClassifier(vocab_size=len(vectorizer.vocab), num_classes=num_classes, hidden_dim=256)
-# device = "cuda" if torch.cuda.is_available() else "cpu"
-# model = model.to(device)
+# ─────────────────────────────────────────────────────────────────────────────
+# METHOD 2: Contextual sentence embeddings  (better input signal for Bi-GRU)
+# Run each incident report through safetyBERT and get per-token hidden states.
+# Your Bi-GRU then processes these instead of a simple embedding lookup.
+# ─────────────────────────────────────────────────────────────────────────────
+def get_contextual_embeddings(
+    texts: list[str],
+    batch_size: int = 16,
+    max_length: int = 128,
+    device: str = "cpu"
+) -> list[torch.Tensor]:
+    """
+    Encode a list of raw incident descriptions into contextual token embeddings.
 
-# results = training(
-#     model_type="tf_idf",
-#     model=model,
-#     train_dl=train_dl,
-#     valid_dl=val_dl,
-#     test_dl=test_dl,
-#     epochs=100,
-#     device=device,
-#     patience=12,
-#     criterion_weights=None,
-#     best_metric="f1_macro",
-#     need_length=False,
-#     energy_model=True,
-#     num_classes=num_classes,
-# )
+    Args:
+        texts:      List of raw description strings (before your preprocessing)
+        batch_size: How many documents to encode at once
+        max_length: BERT max tokens — 128 is fine for incident reports
+        device:     'cuda' or 'cpu'
 
-# %%
+    Returns:
+        List of tensors, each shape (seq_len, 768) — one per document.
+        seq_len varies per document (padding removed).
+    """
+    safety_bert.to(device)
+    all_embeddings = []
 
-# # import pandas as pd
+    for i in range(0, len(texts), batch_size):
+        batch_texts = texts[i : i + batch_size]
 
-# # true_class = "Susceptible Part"
-# # pred_class = "Specialized Shape"
+        inputs = tokenizer(
+            batch_texts,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=max_length,
+        ).to(device)
 
-# # true_idx = label_enc.encode(true_class)
-# # pred_idx = label_enc.encode(pred_class)
+        with torch.no_grad():
+            outputs = safety_bert(**inputs)
 
-# # mask = (val_labels == true_idx) & (preds == pred_idx)
-# # misclassified_indices = mask.nonzero()[0]
+        # last_hidden_state: (batch, seq_len, 768)
+        hidden = outputs.last_hidden_state
 
-# # text_col = column_map["Detailed Description of Event"]
-# # misclassified_texts = model1_valid.iloc[misclassified_indices][[text_col, "energy_type"]].copy()
-# # misclassified_texts["predicted"] = pred_class
+        # Strip padding — return only real tokens per document
+        for j, length in enumerate(inputs["attention_mask"].sum(dim=1)):
+            # slice off [CLS] and [SEP] too — your Bi-GRU doesn't need them
+            all_embeddings.append(hidden[j, 1:length-1, :].cpu())
 
-# # print(f"Found {len(misclassified_indices)} sample(s) labelled '{true_class}' but predicted as '{pred_class}':\n")
-# # pd.set_option("display.max_colwidth", None)
-# # misclassified_texts.reset_index(drop=True)
-
-# # # Look at Specialized Shape examples in validation
-# # spec_shape = model1_valid[model1_valid['energy_type'] == 'Specialized Shape']
-
-# # # Look at Susceptible Part examples in validation
-# # susc_part = model1_valid[model1_valid['energy_type'] == 'Susceptible Part']
-
-# compare = pd.concat([spec_shape, susc_part])[['reference', 'energy_type', 'description', 'description_tokens']]
-# compare.to_csv("debugging.csv")
-
-# import pandas as pd
-# from modules.inference import run_inference
-
-# # Run inference on the validation set
-# infer_config = {
-#     "model": model,
-#     "device": device,
-#     "need_length": False,
-#     "energy_model": True,
-#     "test_dl": val_dl,
-# }
-# infer_result = run_inference(infer_config)
-
-# all_preds = infer_result["all_preds"].numpy()
-# all_true  = infer_result["all_targets"].numpy()
-
-# # Decode labels
-# pred_labels = label_enc.decode_many(all_preds)
-# true_labels = label_enc.decode_many(all_true)
-
-# # Build results df — valid_dl was built without shuffling, so order is preserved
-# results_df = model1_valid.copy().reset_index(drop=True)
-# results_df['pred_label'] = pred_labels
-# results_df['true_label'] = true_labels
-# results_df['correct'] = results_df['pred_label'] == results_df['true_label']
-
-# # ── Priority review pairs ──────────────────────────────────────────────────
-# review_pairs = [
-#     ("Specialized Shape", "Susceptible Part"),
-#     ("Susceptible Part",  "Specialized Shape"),
-#     ("Machine",           "Vehicular"),
-#     ("Vehicular",         "Machine"),
-#     ("Gravitational",     "Human"),
-#     ("Human",             "Gravitational"),
-#     ("Object",            "Gravitational"),
-#     ("Gravitational",     "Object"),
-#     ("Thermal",           "Object"),
-#     ("Thermal",           "Other"),
-# ]
-
-# cols = ['reference', 'true_label', 'pred_label', 'description', 'description_tokens']
-
-# for true_cls, pred_cls in review_pairs:
-#     mask = (
-#         (results_df['true_label'] == true_cls) &
-#         (results_df['pred_label'] == pred_cls)
-#     )
-#     subset = results_df[mask][cols]
-#     if subset.empty:
-#         continue
-
-# valid_df = model1_valid.copy().reset_index(drop=True)
-# valid_df["pred_label"] = pred_labels
-# valid_df["true_label"] = true_labels
-# valid_df["correct"]    = valid_df["pred_label"] == valid_df["true_label"]
-
-# print(f"Test accuracy : {valid_df['correct'].mean():.3f}  ({valid_df['correct'].sum()}/{len(valid_df)})")
-# valid_df.head(3)
-
-# # ── Inference on test set ─────────────────────────────────────────────────
-# test_tokenized_docs = model1_test[tokens_col].tolist()
-# test_labels_enc     = torch.tensor(label_enc.encode_many(model1_test[label_col].tolist()))
-# test_vecs           = vectorizer.transform(test_tokenized_docs)
-# test_dl             = build_tfidf_dataloader(test_vecs, test_labels_enc, shuffle=False)
-
-# test_infer_config = {
-#     "model": model,
-#     "device": device,
-#     "need_length": False,
-#     "energy_model": True,
-#     "test_dl": test_dl,
-# }
-# test_result = run_inference(test_infer_config)
-
-# test_pred_labels = label_enc.decode_many(test_result["all_preds"].numpy())
-# test_true_labels = label_enc.decode_many(test_result["all_targets"].numpy())
-
-# test_df = model1_test.copy().reset_index(drop=True)
-# test_df["pred_label"] = test_pred_labels
-# test_df["true_label"] = test_true_labels
-# test_df["correct"]    = test_df["pred_label"] == test_df["true_label"]
-
-# print(f"Test accuracy : {test_df['correct'].mean():.3f}  ({test_df['correct'].sum()}/{len(test_df)})")
-# test_df.head(3)
-
+    return all_embeddings
 
 
 # %%
-# # Export all misclassified priority pairs to CSV for client review
-# flagged_rows = []
-# for true_cls, pred_cls in review_pairs:
-#     mask = (
-#         (results_df['true_label'] == true_cls) &
-#         (results_df['pred_label'] == pred_cls)
-#     )
-#     flagged_rows.append(results_df[mask][cols])
+vocab = {
+    "worker": 0,
+    "fell": 1,
+    "on": 2,
+    "ladder": 3
+}
 
-# flagged_df = pd.concat(flagged_rows).drop_duplicates(subset='reference')
-# flagged_df.to_csv("labelling_review_flagged.csv", index=False)
-# print(f"Exported {len(flagged_df)} flagged cases to labelling_review_flagged.csv")
+matrix = get_embedding_matrix(vocab)
+print(matrix.shape)  # → torch.Size([4, 768])
+print(matrix)
