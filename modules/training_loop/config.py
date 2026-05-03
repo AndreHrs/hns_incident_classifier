@@ -57,6 +57,7 @@ def _build_train_config(
     run_name,
     #
     extra_config,
+    requirements,
 ):
     """Build the training configuration dictionary."""
     # Generate a timestamp for unique run identification and directory naming
@@ -156,6 +157,7 @@ def _build_train_config(
         #
         "parameters": parameters,
         "device": device,
+        "requirements": requirements,
         #
         "started_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         "timestamp": timestamp,
