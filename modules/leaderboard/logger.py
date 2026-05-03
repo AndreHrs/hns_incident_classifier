@@ -5,6 +5,7 @@ New columns from future runs are merged in; old rows keep NaN for any
 columns that didn't exist when they were written.
 """
 
+import json
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -58,11 +59,16 @@ def _build_row(run_summary: dict, config: dict, model_path: str, leaderboard_dir
     history = run_summary.get("history", {})
     best_epoch = run_summary.get("best_epoch") or 1
     val_history = history.get("training", {}).get("val", {})
+    test_history = history.get("test", {})
     idx = best_epoch - 1  # history is 0-indexed
 
     def _at_best(metric):
         vals = val_history.get(metric, [])
         return vals[idx] if idx < len(vals) else None
+
+    def _last_test(metric):
+        vals = test_history.get(metric, [])
+        return vals[-1] if vals else None
 
     metadata = config.get("metadata", {})
 
@@ -108,6 +114,24 @@ def _build_row(run_summary: dict, config: dict, model_path: str, leaderboard_dir
         "energy_model": config.get("energy_model"),
         # --- Runtime ---
         "training_time_sec": run_summary.get("training_time_sec"),
+        # --- Test set metrics ---
+        "test_loss": _last_test("loss"),
+        "test_accuracy": _last_test("accuracy"),
+        "test_f1_macro": _last_test("f1_macro"),
+        "test_f1_weighted": _last_test("f1_weighted"),
+        "test_precision_macro": _last_test("precision_macro"),
+        "test_recall_macro": _last_test("recall_macro"),
+        "test_auto_classification_rate": _last_test("auto_classification_rate"),
+        "test_fatal_flag_rate": _last_test("fatal_flag_rate"),
+        # --- Client requirement results ---
+        "req_high_confidence_met": _last_test("req_high_confidence_met"),
+        "confidence_high_rate": _last_test("confidence_high_rate"),
+        "confidence_medium_rate": _last_test("confidence_medium_rate"),
+        "confidence_low_rate": _last_test("confidence_low_rate"),
+        "test_fatal_accuracy": _last_test("fatal_accuracy"),
+        "req_fatal_accuracy_met": _last_test("req_fatal_accuracy_met"),
+        "req_all_f1_targets_met": _last_test("req_all_f1_targets_met"),
+        "per_class_requirements": json.dumps(_last_test("per_class_requirements")),
     }
 
 
