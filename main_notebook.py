@@ -48,6 +48,98 @@ lemma_config = {
 # %%
 import torch
 from experiment_setup.tf_idf_runner import tf_idf_run_multiple, tf_idf_hparam_search
+# oneTextPreProcessor = OneTextPreProcessor(keep_numbers=True, column_map=column_map, lemmatize=True, lemma_config=lemma_config)
+# mod_df = oneTextPreProcessor.pre_process_df(df, column_map["Detailed Description of Event"])
+# mod_df
+
+# %%
+def pre_process(data_path):
+    oneTextPreProcessor = OneTextPreProcessor(keep_numbers=False, column_map=column_map)
+    proc_df = oneTextPreProcessor.pre_process_df(
+        pd.read_csv(data_path),
+        column_map["Detailed Description of Event"]
+    )
+    return proc_df
+
+model1_train = pre_process("dataset/model1_train.csv")
+model1_valid = pre_process("dataset/model1_valid.csv")
+model1_test = pre_process("dataset/model1_test.csv")
+
+# model2_train = pre_process("dataset/model2_train.csv")
+# model2_valid = pre_process("dataset/model2_valid.csv")
+# model2_test = pre_process("dataset/model2_test.csv")
+
+# %%
+model1_train["energy_type"].value_counts()
+
+# %%
+tokens_col = f"description_tokens_lemma"
+
+# %%
+from implementations.tf_idf import TFIDFClassifier, TFIDFVectorizer, build_tfidf_dataloader
+from modules.training_loop import _build_train_config, training
+
+# %%
+import torch
+from modules.encoding import LabelEncoder
+
+text_col = column_map["Detailed Description of Event"]         # "description"
+label_col = "energy_type"  # or "Potential Damage" for model2
+
+train_tokenized_docs = model1_train[tokens_col].tolist()
+val_tokenized_docs   = model1_valid[tokens_col].tolist()
+test_tokenized_docs  = model1_test[tokens_col].tolist()
+
+label_enc = LabelEncoder()
+label_enc.fit(model1_train[label_col].tolist())
+
+train_labels = torch.tensor(label_enc.encode_many(model1_train[label_col].tolist()))
+val_labels   = torch.tensor(label_enc.encode_many(model1_valid[label_col].tolist()))
+test_labels  = torch.tensor(label_enc.encode_many(model1_test[label_col].tolist()))
+
+# --- TF-IDF ---
+vectorizer = TFIDFVectorizer().fit(train_tokenized_docs)
+train_vecs = vectorizer.transform(train_tokenized_docs)
+val_vecs   = vectorizer.transform(val_tokenized_docs)
+test_vecs  = vectorizer.transform(test_tokenized_docs)
+
+train_dl = build_tfidf_dataloader(train_vecs, train_labels)
+val_dl   = build_tfidf_dataloader(val_vecs, val_labels, shuffle=False)
+test_dl  = build_tfidf_dataloader(test_vecs, test_labels, shuffle=False)
+
+num_classes = label_enc.num_classes
+model = TFIDFClassifier(vocab_size=len(vectorizer.vocab), num_classes=num_classes, hidden_dim=256)
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model = model.to(device)
+
+results = training(
+    model_type="tf_idf",
+    model=model,
+    train_dl=train_dl,
+    valid_dl=val_dl,
+    test_dl=test_dl,
+    epochs=100,
+    device=device,
+    patience=12,
+    criterion_weights=None,
+    best_metric="f1_macro",
+    need_length=False,
+    energy_model=True,
+    num_classes=num_classes,
+    requirements={
+        "confidence_threshold": {"high": 0.80, "medium": 0.50},
+        "high_threshold": 0.70,
+        "fatal_accuracy": 0.95,
+        "f1_target": {5: 0.70, 6: 0.70, 11: 0.70, 17: 0.70, 0:0.0}, # Class 0 (Animal) no target
+    }
+)
+
+# %%
+from sklearn.metrics import classification_report
+
+model = results["config"]["model"]
+valid_dl = results["config"]["valid_dl"]
+device = results["config"]["device"]
 
 train_df = pd.read_csv("dataset/model1_train.csv")
 valid_df = pd.read_csv("dataset/model1_valid.csv")
