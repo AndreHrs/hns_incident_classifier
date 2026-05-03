@@ -48,11 +48,6 @@ lemma_config = {
 # %%
 import torch
 from experiment_setup.tf_idf_runner import tf_idf_run_multiple, tf_idf_hparam_search
-# oneTextPreProcessor = OneTextPreProcessor(keep_numbers=True, column_map=column_map, lemmatize=True, lemma_config=lemma_config)
-# mod_df = oneTextPreProcessor.pre_process_df(df, column_map["Detailed Description of Event"])
-# mod_df
-
-# %%
 def pre_process(data_path):
     oneTextPreProcessor = OneTextPreProcessor(keep_numbers=False, column_map=column_map)
     proc_df = oneTextPreProcessor.pre_process_df(
@@ -72,17 +67,33 @@ model1_test = pre_process("dataset/model1_test.csv")
 # %%
 model1_train["energy_type"].value_counts()
 
-# %%
-tokens_col = f"description_tokens_lemma"
+train_df = pd.read_csv("dataset/model1_train.csv")
+valid_df = pd.read_csv("dataset/model1_valid.csv")
+test_df = pd.read_csv("dataset/model1_test.csv")
 
-# %%
-from implementations.tf_idf import TFIDFClassifier, TFIDFVectorizer, build_tfidf_dataloader
-from modules.training_loop import _build_train_config, training
+text_col = column_map["Detailed Description of Event"]         # "description"
 
-# %%
-import torch
-from modules.encoding import LabelEncoder
+_EPOCHS = 100
 
+# Baseline: plain TF-IDF features (current default)
+tfidf_train_config = {
+    "epochs": _EPOCHS,
+    "patience": 12,
+    "best_metric": "f1_macro",
+    # Optimizer factory — receives the model after it is built inside the runner
+    "optimizer_fn": lambda model: torch.optim.Adam(model.parameters(), lr=1e-3),
+    # CosineAnnealingLR: lr decays from initial to eta_min over T_max epochs
+    "scheduler_fn": lambda opt: torch.optim.lr_scheduler.CosineAnnealingLR(
+        opt, T_max=_EPOCHS, eta_min=1e-6
+    ),
+    "scheduler_step_per_batch": False,
+}
+
+models = tf_idf_run_multiple(
+    train_df, valid_df, test_df, text_col,
+    keep_numbers=False, lemma_config=lemma_config,
+    energy_model=True, n=5,
+    train_config=tfidf_train_config,
 text_col = column_map["Detailed Description of Event"]         # "description"
 label_col = "energy_type"  # or "Potential Damage" for model2
 
