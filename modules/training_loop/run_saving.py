@@ -74,6 +74,15 @@ class RunSaver:
                 "fatal_flag_rate": [],
                 "meets_requirement": [],
                 "threshold_used": [],
+                # Client requirement results (populated when config["requirements"] is set)
+                "confidence_high_rate": [],
+                "confidence_medium_rate": [],
+                "confidence_low_rate": [],
+                "req_high_confidence_met": [],
+                "fatal_accuracy": [],
+                "req_fatal_accuracy_met": [],
+                "per_class_requirements": [],
+                "req_all_f1_targets_met": [],
             },
         }
 
