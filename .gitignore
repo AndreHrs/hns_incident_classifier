@@ -10,4 +10,6 @@ trained_models
 trained_models/*
 .idea
 data_corrector.py
-leaderboard/owner.conf
+leaderboard/owner.confconfusion_matrix.png
+debugging.csv
+labelling_review_flagged.csv
