@@ -1,0 +1,195 @@
+"""Learning-rate scheduler utilities for the shared training loop."""
+
+from __future__ import annotations
+
+from typing import Any
+
+import torch
+
+
+def normalise_scheduler_config(
+    scheduler: Any = None,
+    scheduler_step_per_batch: bool = False,
+    best_metric: str = "loss",
+    best_metric_mode: str | None = None,
+) -> dict:
+    """Normalise scheduler inputs into a serialisable config dictionary.
+
+    Backward-compatible behaviour:
+    - scheduler=False disables scheduling.
+    - scheduler=None uses the historical default StepLR.
+    - scheduler=dict uses explicit scheduler configuration.
+    - scheduler object is treated as a custom scheduler object.
+    
+    :param scheduler: Scheduler configuration or object.
+    :type scheduler: Any
+    :param scheduler_step_per_batch: Whether to step the scheduler every batch instead of every epoch.
+    :type scheduler_step_per_batch: bool
+    :param best_metric: The metric to monitor for ReduceLROnPlateau schedulers.
+    :type best_metric: str
+    :param best_metric_mode: Whether to minimize or maximize the monitored metric for ReduceLROnPlateau schedulers. If None, this is inferred from the metric name.
+    :type best_metric_mode: str | None
+    :returns: Normalised scheduler configuration dictionary.
+    :rtype: dict
+    """
+    if best_metric_mode is None:
+        best_metric_mode = "min" if "loss" in best_metric.lower() else "max"
+
+    if scheduler is False:
+        return {
+            "name": None,
+            "step_per_batch": False,
+        }
+
+    if scheduler is None:
+        return {
+            "name": "StepLR",
+            "step_size": 1,
+            "gamma": 0.95,
+            "step_per_batch": scheduler_step_per_batch,
+        }
+
+    if isinstance(scheduler, dict):
+        config = dict(scheduler)
+        config.setdefault("step_per_batch", scheduler_step_per_batch)
+
+        if config.get("name") == "ReduceLROnPlateau":
+            config.setdefault("monitor", best_metric)
+            config.setdefault("mode", best_metric_mode)
+
+        return config
+
+    # Backward compatibility for existing code that passes a scheduler object.
+    return {
+        "name": scheduler.__class__.__name__,
+        "step_per_batch": scheduler_step_per_batch,
+        "custom_object": True,
+    }
+
+
+def create_scheduler(optimiser, scheduler_config: dict | None, scheduler_object=None):
+    """Create a PyTorch scheduler from a scheduler config dictionary.
+    
+    :param optimiser: The optimizer for which to create the scheduler.
+    :type optimiser: torch.optim.Optimizer
+    :param scheduler_config: Configuration dictionary specifying the scheduler type and parameters.
+    :type scheduler_config: dict | None
+    :param scheduler_object: Optional custom scheduler object to use if 'custom_object' is True in the config.
+    :type scheduler_object: Any
+    :returns: A PyTorch learning rate scheduler instance or None if scheduling is disabled.
+    :rtype: torch.optim.lr_scheduler._LRScheduler | torch.optim.lr_scheduler.ReduceLROnPlateau | None
+    """
+    if not scheduler_config:
+        return None
+
+    name = scheduler_config.get("name")
+
+    if name is None or str(name).lower() in {"none", "false", "disabled"}:
+        return None
+
+    if scheduler_config.get("custom_object"):
+        return scheduler_object
+
+    if name == "StepLR":
+        return torch.optim.lr_scheduler.StepLR(
+            optimiser,
+            step_size=scheduler_config.get("step_size", 1),
+            gamma=scheduler_config.get("gamma", 0.95),
+        )
+
+    if name == "ExponentialLR":
+        return torch.optim.lr_scheduler.ExponentialLR(
+            optimiser,
+            gamma=scheduler_config.get("gamma", 0.95),
+        )
+
+    if name == "CosineAnnealingLR":
+        return torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimiser,
+            T_max=scheduler_config.get("T_max", 10),
+            eta_min=scheduler_config.get("eta_min", 0.0),
+        )
+
+    if name == "ReduceLROnPlateau":
+        return torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimiser,
+            mode=scheduler_config.get("mode", "min"),
+            factor=scheduler_config.get("factor", 0.5),
+            patience=scheduler_config.get("patience", 2),
+            min_lr=scheduler_config.get("min_lr", 0.0),
+        )
+
+    if name == "SequentialLR":
+        warmup_iters = scheduler_config.get("warmup_iters", 1)
+
+        warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
+            optimiser,
+            start_factor=scheduler_config.get("start_factor", 1e-3),
+            end_factor=scheduler_config.get("end_factor", 1.0),
+            total_iters=warmup_iters,
+        )
+
+        after_scheduler_name = scheduler_config.get(
+            "after_scheduler",
+            "CosineAnnealingLR",
+        )
+
+        if after_scheduler_name != "CosineAnnealingLR":
+            raise ValueError(
+                "SequentialLR currently only supports CosineAnnealingLR "
+                "as the after_scheduler."
+            )
+
+        cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimiser,
+            T_max=scheduler_config.get("T_max", 10),
+            eta_min=scheduler_config.get("eta_min", 0.0),
+        )
+
+        return torch.optim.lr_scheduler.SequentialLR(
+            optimiser,
+            schedulers=[warmup_scheduler, cosine_scheduler],
+            milestones=[warmup_iters],
+        )
+
+    raise ValueError(f"Unsupported scheduler: {name}")
+
+
+def step_scheduler(
+    scheduler,
+    scheduler_config: dict | None,
+    metrics: dict | None = None,
+) -> None:
+    """Step the scheduler safely.
+
+    ReduceLROnPlateau requires a monitored metric.
+    Other schedulers step without a metric.
+    
+    :param scheduler: The learning rate scheduler to step.
+    :type scheduler: torch.optim.lr_scheduler._LRScheduler | torch.optim.lr_scheduler.ReduceLROnPlateau | None
+    :param scheduler_config: Configuration dictionary specifying the scheduler type and parameters.
+    :type scheduler_config: dict | None
+    :param metrics: Dictionary of metrics to use for stepping the scheduler, if required.
+    :type metrics: dict | None
+    :returns: None
+    :rtype: None
+    """
+    if scheduler is None:
+        return
+
+    scheduler_config = scheduler_config or {}
+    name = scheduler_config.get("name")
+
+    if name == "ReduceLROnPlateau":
+        monitor = scheduler_config.get("monitor", "loss")
+
+        if metrics is None or monitor not in metrics:
+            raise ValueError(
+                f"ReduceLROnPlateau requires monitor metric '{monitor}', "
+                "but that metric was not provided."
+            )
+
+        scheduler.step(metrics[monitor])
+        return
+
+    scheduler.step()

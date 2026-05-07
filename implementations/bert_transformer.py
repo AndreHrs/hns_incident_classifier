@@ -69,8 +69,10 @@ def run_bert_experiment(
     use_class_weights=False,
     weight_decay=0.01,
     threshold=0.8,
+    patience=2,
     model_name="bert-base-uncased",
     tokenizer_name=None,
+    scheduler_config=None,
 ):
     """Train and evaluate a BERT classifier for one target label.
 
@@ -106,11 +108,20 @@ def run_bert_experiment(
     :type weight_decay: float
     :param threshold: Confidence threshold for auto-classification analysis.
     :type threshold: float
+    :param model_name: Hugging Face model identifier for the BERT variant to use.
+    :type model_name: str
+    :param tokenizer_name: Hugging Face model identifier for the tokenizer to use. If None, defaults to the same as model_name.
+    :type tokenizer_name: str | None
 
     :returns: Run summary from the shared training pipeline.
     :rtype: dict
     """
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    device = torch.device(
+    "cuda" if torch.cuda.is_available()
+    else "mps" if torch.backends.mps.is_available()
+    else "cpu"
+    )
 
     train_df, valid_df, test_df, label_encoder, class_names = encode_label_column(
         train_df=train_df,
@@ -120,7 +131,7 @@ def run_bert_experiment(
     )
 
     bert_config = BertEmbeddingConfig(
-        model_name="bert-base-uncased",
+        model_name=model_name,
         tokenizer_name=tokenizer_name,
         max_length=max_length,
         dropout=0.1,
@@ -191,8 +202,12 @@ def run_bert_experiment(
         optimiser=optimiser,
         optimiser_args=None,
 
-        scheduler=None,
-        scheduler_step_per_batch=False,
+        scheduler=scheduler_config,
+        scheduler_step_per_batch=(
+            scheduler_config.get("step_per_batch", False)
+            if scheduler_config
+            else False
+        ),
 
         criterion_type="cross_entropy",
         criterion_weights=criterion_weights,
@@ -203,7 +218,7 @@ def run_bert_experiment(
         test_dl=test_dl,
 
         epochs=epochs,
-        patience=2,
+        patience=patience,
         num_classes=label_encoder.num_classes,
         class_dict=label_encoder.id_to_label,
         clip_grad_max_norm=1.0,
@@ -229,6 +244,7 @@ def run_bert_experiment(
             "weight_decay": weight_decay,
             "model_name": model_name,
             "tokenizer_name": tokenizer_name,
+            "scheduler_config": scheduler_config,
         },
         device=device,
 

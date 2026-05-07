@@ -15,6 +15,7 @@ from .run_saving import RunSaver
 from .utility import _safe_class_name, _serialise_value, _is_better
 from .evaluate import evaluate
 from ..leaderboard import log_run
+from .scheduler import step_scheduler
 
 
 #  MAIN TRAINING LOOP // ensures all control variables are consistent // compatible with Dataloader-based pipelines
@@ -58,8 +59,15 @@ def train_model_loop(
         train_metrics = train_one_epoch(config)
         val_metrics = validate(config)
 
+        # if config["scheduler"] is not None and not config["scheduler_step_per_batch"]:
+        #     config["scheduler"].step()
+        
         if config["scheduler"] is not None and not config["scheduler_step_per_batch"]:
-            config["scheduler"].step()
+            step_scheduler(
+                scheduler=config["scheduler"],
+                scheduler_config=config.get("scheduler_config"),
+                metrics=val_metrics,
+                )
 
         run_saver.history["training"]["epoch_time_sec"].append(time.time() - epoch_start_time)
 

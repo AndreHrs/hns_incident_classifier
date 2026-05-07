@@ -10,6 +10,7 @@ import torch.optim as optim
 from .utility import _safe_class_name
 from .loss import get_loss_function
 from .imbalance import make_weighted_sampler
+from .scheduler import normalise_scheduler_config, create_scheduler
 
 
 # CONFIG AND UTILITY FUNCTIONS FOR TRAINING LOOP
@@ -77,11 +78,29 @@ def _build_train_config(
             sampler=sampler,
         )
 
-    # False means "no scheduler" (explicit opt-out); None means "use default"
-    if scheduler is False:
-        scheduler = None
-    elif scheduler is None:
-        scheduler = optim.lr_scheduler.StepLR(optimiser, step_size=1, gamma=0.95)
+    # # False means "no scheduler" (explicit opt-out); None means "use default"
+    # if scheduler is False:
+    #     scheduler = None
+    # elif scheduler is None:
+    #     scheduler = optim.lr_scheduler.StepLR(optimiser, step_size=1, gamma=0.95)
+    
+    scheduler_config = normalise_scheduler_config(
+    scheduler=scheduler,
+    scheduler_step_per_batch=scheduler_step_per_batch,
+    best_metric=best_metric,
+    best_metric_mode=best_metric_mode,
+    )
+    
+    scheduler = create_scheduler(
+    optimiser=optimiser,
+    scheduler_config=scheduler_config,
+    scheduler_object=scheduler if scheduler_config.get("custom_object") else None,
+    )
+    
+    scheduler_step_per_batch = scheduler_config.get(
+    "step_per_batch",
+    scheduler_step_per_batch,
+    )
 
     # LOSS FUNCTION // Get the loss function based on the specified type and weights
     criterion = get_loss_function(
@@ -126,6 +145,7 @@ def _build_train_config(
         "optimiser": optimiser,
         #
         "scheduler": scheduler,
+        "scheduler_config": scheduler_config,
         "scheduler_step_per_batch": scheduler_step_per_batch,
         #
         "criterion": criterion,
