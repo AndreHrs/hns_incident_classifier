@@ -171,6 +171,7 @@ def log_search_run(run_summary: dict, config: dict, model_path: str, leaderboard
     search_dir.mkdir(parents=True, exist_ok=True)
 
     row = _build_row(run_summary, config, model_path, leaderboard_dir)
+    row["search_parameters"] = json.dumps(config.get("parameters", {}))
 
     # 1. Append to all_searches.csv
     all_searches_path = search_dir / "all_searches.csv"
