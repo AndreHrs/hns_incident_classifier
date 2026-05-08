@@ -132,6 +132,9 @@ def _build_row(run_summary: dict, config: dict, model_path: str, leaderboard_dir
         "req_fatal_accuracy_met": _last_test("req_fatal_accuracy_met"),
         "req_all_f1_targets_met": _last_test("req_all_f1_targets_met"),
         "per_class_requirements": json.dumps(_last_test("per_class_requirements")),
+        # --- Search parameters ---
+        "search_parameters": json.dumps(config.get("parameters", {})),
+        "is_hyperparameter_search": config.get("is_hyperparameter_search", False),
     }
 
 
@@ -171,7 +174,6 @@ def log_search_run(run_summary: dict, config: dict, model_path: str, leaderboard
     search_dir.mkdir(parents=True, exist_ok=True)
 
     row = _build_row(run_summary, config, model_path, leaderboard_dir)
-    row["search_parameters"] = json.dumps(config.get("parameters", {}))
 
     # 1. Append to all_searches.csv
     all_searches_path = search_dir / "all_searches.csv"
