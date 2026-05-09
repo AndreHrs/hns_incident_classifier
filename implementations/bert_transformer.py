@@ -116,7 +116,6 @@ def run_bert_experiment(
     :returns: Run summary from the shared training pipeline.
     :rtype: dict
     """
-    
     device = torch.device(
     "cuda" if torch.cuda.is_available()
     else "mps" if torch.backends.mps.is_available()
