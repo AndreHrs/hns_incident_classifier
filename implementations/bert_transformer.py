@@ -39,6 +39,7 @@ def encode_label_column(train_df, valid_df, test_df, label_col):
         valid_df: Validation dataframe.
         test_df: Test dataframe.
         label_col: Name of the column containing label data.
+
     Returns:
         Tuple of (train_df, valid_df, test_df, label_encoder, class_names) where the dataframes have the label column encoded as integers, label_encoder is the fitted LabelEncoder instance, and class_names is a list mapping label IDs to original label names.
     """
@@ -147,6 +148,7 @@ def run_bert_experiment(
         tokenizer_name: Hugging Face model identifier for the tokenizer to use. If None, defaults to the same as model_name.
         model_type: String identifier for the model type, used in metadata and save names.
         target_type: String identifier for the target type ("energy" or "risk"), used in metadata and save names.
+        scheduler_config: Optional dictionary specifying the learning rate scheduler configuration. If None, no scheduler is used. Expected keys include "name" for the scheduler type and other scheduler-specific parameters.
     
     Returns:
         Tuple containing the trained model, evaluation results, and other relevant information.
@@ -347,7 +349,6 @@ def run_safetybert_best_experiment(
     **kwargs,
 ):
     """Run SafetyBERT using the best-found hyperparameter configuration."""
-    
     BEST_SAFETYBERT_CONFIG = {
     "fine_tune": True,
     "pooling": "cls",
