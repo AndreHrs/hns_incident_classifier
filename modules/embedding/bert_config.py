@@ -12,7 +12,8 @@ class BertEmbeddingConfig:
     :type model_name: str
     :param max_length: Maximum sequence length for tokenizer output.
     :type max_length: int
-    :param dropout: Dropout applied after transformer token embeddings.
+    :param dropout: Embedding dropout applied to transformer token embeddings
+        before pooling. This is separate from classifier-head dropout.
     :type dropout: float
     :param pooling: Pooling strategy for sentence embedding. Supported values:
         - ``"cls"``
