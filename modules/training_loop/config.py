@@ -85,21 +85,21 @@ def _build_train_config(
     #     scheduler = optim.lr_scheduler.StepLR(optimiser, step_size=1, gamma=0.95)
     
     scheduler_config = normalise_scheduler_config(
-    scheduler=scheduler,
-    scheduler_step_per_batch=scheduler_step_per_batch,
-    best_metric=best_metric,
-    best_metric_mode=best_metric_mode,
+        scheduler=scheduler,
+        scheduler_step_per_batch=scheduler_step_per_batch,
+        best_metric=best_metric,
+        best_metric_mode=best_metric_mode,
     )
     
     scheduler = create_scheduler(
-    optimiser=optimiser,
-    scheduler_config=scheduler_config,
-    scheduler_object=scheduler if scheduler_config.get("custom_object") else None,
+        optimiser=optimiser,
+        scheduler_config=scheduler_config,
+        scheduler_object=scheduler if scheduler_config.get("custom_object") else None,
     )
     
     scheduler_step_per_batch = scheduler_config.get(
-    "step_per_batch",
-    scheduler_step_per_batch,
+        "step_per_batch",
+        scheduler_step_per_batch,
     )
 
     # LOSS FUNCTION // Get the loss function based on the specified type and weights
