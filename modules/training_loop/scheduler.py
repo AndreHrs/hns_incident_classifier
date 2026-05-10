@@ -20,7 +20,6 @@ def step_scheduler(
     Returns:
         None
     """
-    
     if scheduler is None:
         return
 
