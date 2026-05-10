@@ -9,6 +9,7 @@ def step_scheduler(
     metrics: dict | None = None,
 ) -> None:
     """Step the scheduler safely.
+    
     This function handles when/how the scheduler is stepped.
     
     Args:
