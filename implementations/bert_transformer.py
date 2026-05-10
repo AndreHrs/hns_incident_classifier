@@ -13,6 +13,26 @@ from modules.encoding.label_encoder import LabelEncoder
 from modules.models.bert_classifier import BertClassifier
 from modules.training_loop import training
 
+BEST_SAFETYBERT_CONFIG = {
+    "fine_tune": True,
+    "pooling": "cls",
+    "learning_rate": 2e-5,
+    "dropout": 0.275,
+    "weight_decay": 0.01,
+    "max_length": 160,
+    "batch_size": 8,
+    "epochs": 6,
+    "use_class_weights": False,
+    "scheduler_config": {
+        "name": "ReduceLROnPlateau",
+        "monitor": "f1_macro",
+        "mode": "max",
+        "factor": 0.5,
+        "patience": 1,
+        "min_lr": 1e-7,
+        "step_per_batch": False,
+        },
+    }
 
 def get_best_available_device() -> torch.device:
     """Return the best available PyTorch device.
@@ -151,7 +171,7 @@ def run_bert_experiment(
         scheduler_config: Optional dictionary specifying the learning rate scheduler configuration. If None, no scheduler is used. Expected keys include "name" for the scheduler type and other scheduler-specific parameters.
     
     Returns:
-        Tuple containing the trained model, evaluation results, and other relevant information.
+        Run summary returned by the shared training pipeline.
     """
     if target_type not in {"energy", "risk"}:
         raise ValueError("target_type must be either 'energy' or 'risk'.")
@@ -349,27 +369,7 @@ def run_safetybert_best_experiment(
     **kwargs,
 ):
     """Run SafetyBERT using the best-found hyperparameter configuration."""
-    BEST_SAFETYBERT_CONFIG = {
-    "fine_tune": True,
-    "pooling": "cls",
-    "learning_rate": 2e-5,
-    "dropout": 0.275,
-    "weight_decay": 0.01,
-    "max_length": 160,
-    "batch_size": 8,
-    "epochs": 6,
-    "use_class_weights": False,
-    "scheduler_config": {
-        "name": "ReduceLROnPlateau",
-        "monitor": "f1_macro",
-        "mode": "max",
-        "factor": 0.5,
-        "patience": 1,
-        "min_lr": 1e-7,
-        "step_per_batch": False,
-        },
-    }
-
+    
     params = {
         "model_name": "adanish91/safetybert",
         "tokenizer_name": "bert-base-uncased",
