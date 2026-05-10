@@ -16,6 +16,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from modules.optimisation.scheduler_factory import create_scheduler, normalise_scheduler_config
+from modules.training_loop.scheduler import step_scheduler
 from modules.training_loop.utility import (
     _is_better,
     _serialise_value,
@@ -23,11 +25,6 @@ from modules.training_loop.utility import (
     _get_learning_rates,
 )
 
-from modules.training_loop.scheduler import (
-    normalise_scheduler_config,
-    create_scheduler,
-    step_scheduler,
-)
 
 # Import directly from the submodule to avoid pulling in run_saving (matplotlib)
 # via modules/training_loop/__init__.py
