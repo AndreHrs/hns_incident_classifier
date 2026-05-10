@@ -9,15 +9,17 @@ def step_scheduler(
     metrics: dict | None = None,
 ) -> None:
     """Step the scheduler safely.
-    This function only handles when/how the scheduler is stepped.
+    This function handles when/how the scheduler is stepped.
     
     Args:
         scheduler: The learning-rate scheduler to step.
         scheduler_config: Configuration dictionary specifying the scheduler type and parameters.
         metrics: Dictionary of metrics to use for stepping the scheduler, if required.
+
     Returns:
         None
     """
+    
     if scheduler is None:
         return
 
