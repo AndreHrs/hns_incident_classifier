@@ -69,6 +69,9 @@ def save_uploaded_file(uploaded_file) -> Path:
         return Path(f.name)
 
 
+DOCS_INDEX = Path(__file__).resolve().parents[1] / "docs" / "build" / "html" / "index.html"
+
+
 def main():
     """Run the Streamlit multi-page app."""
     st.set_page_config(page_title="Incident Classifier", layout="wide")
@@ -77,9 +80,21 @@ def main():
     infer_pg = st.Page("pages/inference_page.py", title="Inference", icon="🔍")
     metrics_pg = st.Page("pages/metrics_page.py", title="Metrics", icon="📊")
     review_pg = st.Page("pages/human_review_page.py", title="Human Review", icon="👁️")
+    report_pg = st.Page("pages/report_page.py", title="Report", icon="📄")
     settings_pg = st.Page("pages/settings_page.py", title="Settings", icon="⚙️")
 
-    pg = st.navigation([train_pg, infer_pg, metrics_pg, review_pg, settings_pg])
+    pg = st.navigation([train_pg, infer_pg, metrics_pg, review_pg, report_pg, settings_pg])
+
+    with st.sidebar:
+        if DOCS_INDEX.exists():
+            docs_url = DOCS_INDEX.as_uri()
+        else:
+            docs_url = None
+        if docs_url:
+            st.markdown(f"[📚 Documentation]({docs_url})", unsafe_allow_html=True)
+        else:
+            st.caption("Documentation not built yet. Run `make -C docs html`.")
+
     pg.run()
 
 
