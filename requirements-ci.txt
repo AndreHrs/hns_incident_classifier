@@ -9,3 +9,4 @@ transformers
 matplotlib
 seaborn
 numpy
+streamlit>=1.35
