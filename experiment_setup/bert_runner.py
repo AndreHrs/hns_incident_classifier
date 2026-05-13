@@ -92,6 +92,7 @@ def bert_train(
         use_class_weights=cfg["use_class_weights"],
         weight_decay=cfg["weight_decay"],
         threshold=cfg["threshold"],
+        verbose=cfg.get("verbose", True),
     )
 
     if (
@@ -229,6 +230,7 @@ def bert_hparam_search(
             "batch_size": batch_size,
             "epochs": epochs,
             "learning_rate": learning_rate,
+            "verbose": False,
         }
         result = bert_train(
             train_df, valid_df, test_df, text_col,
