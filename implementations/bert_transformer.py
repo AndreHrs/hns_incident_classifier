@@ -69,6 +69,7 @@ def run_bert_experiment(
     use_class_weights=False,
     weight_decay=0.01,
     threshold=0.8,
+    verbose=True,
 ):
     """Train and evaluate a BERT classifier for one target label.
 
@@ -227,6 +228,7 @@ def run_bert_experiment(
         },
         device=device,
 
+        verbose=verbose,
         compute_train_metrics=False,
         save=True,
         parent_dir="trained_models",
