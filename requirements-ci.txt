@@ -1,5 +1,7 @@
 pandas
 pytest
+click
+rich
 contractions
 spacy
 torch
