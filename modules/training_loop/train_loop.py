@@ -15,7 +15,7 @@ from .run_saving import RunSaver
 from .utility import _safe_class_name, _serialise_value, _is_better
 from .evaluate import evaluate
 from ..leaderboard import log_run
-from .scheduler import step_scheduler
+from ..optimisation.scheduler import step_scheduler
 from ..leaderboard import log_run, log_search_run
 
 

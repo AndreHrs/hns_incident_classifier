@@ -17,7 +17,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from modules.optimisation.scheduler_factory import create_scheduler, normalise_scheduler_config
-from modules.training_loop.scheduler import step_scheduler
+from modules.optimisation.scheduler import step_scheduler
 from modules.training_loop.utility import (
     _is_better,
     _serialise_value,

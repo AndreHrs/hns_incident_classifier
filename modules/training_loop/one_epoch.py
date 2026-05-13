@@ -6,7 +6,7 @@ import torch.optim as optim
 
 from .utility import _unpack_batch, _get_learning_rates
 from .metrics import _compute_classification_metrics
-from .scheduler import step_scheduler
+from ..optimisation.scheduler import step_scheduler
 
 
 # SINGLE EPOCH TRAINING LOOP // returning training accuracy and loss of one training epoch
