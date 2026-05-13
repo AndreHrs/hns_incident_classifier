@@ -246,12 +246,6 @@ def tf_idf_train(
     )
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model  = model.to(device)
-
-    # optimizer_fn  = cfg.pop("optimizer_fn", None)
-    # scheduler_fn  = cfg.pop("scheduler_fn", None)
-
-    # optimiser = optimizer_fn(model) if optimizer_fn is not None else None
-    # scheduler = scheduler_fn(optimiser) if (scheduler_fn is not None and optimiser is not None) else None
     
     optimizer_fn  = cfg.pop("optimizer_fn", None)
     scheduler_config = cfg.pop("scheduler_config", None)
