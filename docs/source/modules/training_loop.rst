@@ -31,11 +31,6 @@ Training Loop
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: modules.optimisation.loss
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. automodule:: modules.training_loop.metrics
    :members:
    :undoc-members:
