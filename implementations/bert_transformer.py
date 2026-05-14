@@ -70,6 +70,7 @@ def run_bert_experiment(
     weight_decay=0.01,
     threshold=0.8,
     verbose=True,
+    energy_model=True,
 ):
     """Train and evaluate a BERT classifier for one target label.
 
@@ -182,7 +183,7 @@ def run_bert_experiment(
 
     run_summary = training(
         model=model,
-        energy_model=True,
+        energy_model=energy_model,
         model_type="BERT",
         need_length=False,
 
