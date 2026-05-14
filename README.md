@@ -8,12 +8,31 @@ Requires **conda** and **Python 3.12 or higher**.
 
 - [User Guide](#user-guide)
   - [Setup](#setup)
+    - [Prerequisites](#prerequisites)
+    - [Automatic (Recommended)](#automatic-recommended)
+      - [Linux / macOS](#linux--macos)
+      - [Windows](#windows)
+    - [Manual](#manual)
   - [Running the Web UI](#running-the-web-ui)
+    - [Linux / macOS](#linux--macos-1)
+    - [Windows](#windows-1)
+    - [Manual](#manual-1)
   - [CLI Usage](#cli-usage)
+    - [`train` — Fine-tune a model](#train--fine-tune-a-model)
+    - [`infer` — Batch inference](#infer--batch-inference)
+    - [`metrics` — Inspect the leaderboard](#metrics--inspect-the-leaderboard)
+  - [Building Code Documentation](#building-code-documentation)
+    - [Linux / macOS](#linux--macos-2)
+    - [Windows](#windows-2)
+    - [Manual](#manual-2)
 - [Developer / Maintainer Guide](#developer--maintainer-guide)
   - [Code Style](#code-style)
   - [Naming Conventions](#naming-conventions)
   - [Development Workflow](#development-workflow)
+    - [Branch Structure](#branch-structure)
+    - [Starting a Feature](#starting-a-feature)
+    - [Before Creating a Pull Request](#before-creating-a-pull-request)
+    - [Sprint / Iteration Release](#sprint--iteration-release)
   - [Notebook Synchronization](#notebook-synchronization)
   - [Module Placement](#module-placement)
 
@@ -32,16 +51,22 @@ Requires **conda** and **Python 3.12 or higher**.
 
 The installer detects your GPU, creates a conda environment named `hs_classifier`, installs all dependencies with the correct PyTorch build, and downloads the spaCy model.
 
-**Linux / macOS**
+#### Linux / macOS
 
 > Tested on Linux. Should also work on macOS, but this has not been verified.
+
+If the scripts are not executable, run this once first:
+
+```bash
+chmod +x install.sh run_ui.sh build_docs.sh
+```
 
 ```bash
 ./install.sh          # first-time setup
 ./install.sh --force  # reinstall from scratch
 ```
 
-**Windows**
+#### Windows
 
 > The `.bat` scripts are AI-converted from the tested `.sh` scripts and have **not** been tested. Use with caution.
 
@@ -82,19 +107,23 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/rocm7
 
 ## Running the Web UI
 
-**Linux / macOS (Recommended)** — runs the installer first if not yet set up:
+#### Linux / macOS
+
+Runs the installer automatically if not yet set up:
 
 ```bash
 ./run_ui.sh
 ```
 
-**Windows (untested, AI-converted):**
+#### Windows
+
+> AI-converted from the tested `.sh` script and has **not** been tested. Use with caution.
 
 ```bat
 run_ui.bat
 ```
 
-**Manual:**
+#### Manual
 
 ```bash
 streamlit run app/app.py
@@ -119,6 +148,16 @@ python cli.py train \
   --test  data/test.csv \
   --model-type  <energy|damage> \
   --architecture <tf_idf|bigru|bert|looped_transformer>
+```
+
+Example:
+```bash
+python cli.py train \
+  --train dataset/model1_train.csv \
+  --valid dataset/model1_valid.csv \
+  --test  dataset/model1_test.csv \
+  --model-type  energy \
+  --architecture tf_idf
 ```
 
 **Optional flags:**
@@ -147,6 +186,15 @@ python cli.py infer \
   [--damage-model path/to/damage_run]
 ```
 
+Example:
+```bash
+python cli.py infer \
+  --dataset dataset/model1_test.csv \
+  --output  results.csv \
+  --energy-model trained_models/20260514_203159_tf_idf
+```
+
+
 At least one of `--energy-model` or `--damage-model` must be supplied. The output CSV includes confidence tiers and action columns. Prints row counts and tier distributions.
 
 ### `metrics` — Inspect the leaderboard
@@ -158,7 +206,7 @@ python cli.py metrics
 # Filter and sort
 python cli.py metrics --model-type energy --architecture bert --sort-by test_f1_macro --top 10
 
-# Dump a single run's full details
+# Dump a single run's full details (WARNING: BIG FILE)
 python cli.py metrics --model-dir path/to/run
 ```
 
@@ -177,12 +225,30 @@ Renders a rich table if the `rich` package is installed, otherwise falls back to
 
 ---
 
-## Building Documentation
+## Building Code Documentation
+
+#### Linux / macOS
+
+```bash
+./build_docs.sh
+```
+
+#### Windows
+
+> AI-converted from the tested `.sh` script and has **not** been tested. Use with caution.
+
+```bat
+build_docs.bat
+```
+
+#### Manual
 
 ```bash
 cd docs
 make html
 ```
+
+Output is written to `docs/build/html/index.html`.
 
 ---
 
