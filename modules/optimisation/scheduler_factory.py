@@ -14,6 +14,7 @@ def normalise_scheduler_config(
     best_metric_mode: str | None = None,
 ) -> dict:
     """Normalise scheduler inputs into a serialisable config dictionary.
+
     Arguments:
         scheduler: Scheduler configuration or object. Backward-compatible behaviour:
             - scheduler=False disables scheduling.
@@ -23,6 +24,7 @@ def normalise_scheduler_config(
         scheduler_step_per_batch: Whether to step the scheduler every batch instead of every epoch.
         best_metric: The metric to monitor for ReduceLROnPlateau schedulers.
         best_metric_mode: Whether to minimize or maximize the monitored metric for ReduceLROnPlateAU schedulers. If None, this is inferred from the metric name.
+
     Returns:
         dict: Normalised scheduler configuration dictionary.
     """
@@ -73,9 +75,11 @@ def create_scheduler(optimiser, scheduler_config: dict | None, scheduler_object=
         scheduler_config: A dictionary containing the scheduler configuration. See
             :func:`~modules.optimisation.scheduler_factory.normalise_scheduler_config` for expected keys.
         scheduler_object: If passing a custom scheduler object, this should be the instantiated scheduler to return.
+
     Returns:
         A PyTorch learning rate scheduler instance, or None if scheduling is disabled.
     """
+    
     if not scheduler_config:
         return None
 
