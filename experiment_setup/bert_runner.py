@@ -81,6 +81,7 @@ def bert_train(
         test_df=test_df,
         text_col=text_col,
         label_col=label_col,
+        energy_model=energy_model,
         run_name=cfg["run_name"],
         fine_tune=cfg["fine_tune"],
         pooling=cfg["pooling"],
