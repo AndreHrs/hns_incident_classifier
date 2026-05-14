@@ -135,7 +135,6 @@ def run_bert_experiment(
     target_type="energy",
     scheduler_config=None,
     verbose=True,
-    energy_model=True,
 ):
     """Train and evaluate a BERT-style classifier for one target label.
 
@@ -172,7 +171,6 @@ def run_bert_experiment(
         target_type: String identifier for the target type ("energy" or "risk"), used in metadata and save names.
         scheduler_config: Optional dictionary specifying the learning rate scheduler configuration. If None, no scheduler is used. Expected keys include "name" for the scheduler type and other scheduler-specific parameters.
         verbose: Will not print logs if False, defaults to True.
-        energy_model: Flag for Energy Model (True) or Potential Damage (False), for backward compatibility.
 
     Returns:
         Run summary returned by the shared training pipeline.

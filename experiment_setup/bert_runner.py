@@ -3,8 +3,6 @@
 import pickle
 from pathlib import Path
 
-import torch
-
 from implementations.bert_transformer import run_bert_experiment
 from modules.encoding import LabelEncoder
 
@@ -74,6 +72,7 @@ def bert_train(
     """
     cfg = {**_BERT_DEFAULTS, **(train_config or {})}
     label_col = "energy_type" if energy_model else "potential_damage"
+    target_type = "energy" if energy_model else "risk"
 
     result = run_bert_experiment(
         train_df=train_df,
@@ -81,7 +80,7 @@ def bert_train(
         test_df=test_df,
         text_col=text_col,
         label_col=label_col,
-        energy_model=energy_model,
+        target_type=target_type,
         run_name=cfg["run_name"],
         fine_tune=cfg["fine_tune"],
         pooling=cfg["pooling"],
