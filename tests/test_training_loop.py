@@ -23,10 +23,11 @@ from modules.training_loop.utility import (
     _get_learning_rates,
 )
 
+
 # Import directly from the submodule to avoid pulling in run_saving (matplotlib)
 # via modules/training_loop/__init__.py
 from modules.training_loop.metrics import _compute_classification_metrics
-from modules.training_loop.loss import get_loss_function, FocalLoss
+from modules.optimisation.loss import get_loss_function, FocalLoss
 from modules.training_loop.imbalance import compute_class_weights, make_weighted_sampler
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
