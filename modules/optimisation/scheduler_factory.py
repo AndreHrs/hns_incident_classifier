@@ -64,12 +64,14 @@ def normalise_scheduler_config(
 
 def create_scheduler(optimiser, scheduler_config: dict | None, scheduler_object=None):
     """Create a PyTorch scheduler from a scheduler config dictionary.
-        Supported schedulers:
+    
+    Supported schedulers:
         - StepLR
         - ExponentialLR
         - CosineAnnealingLR
         - ReduceLROnPlateau
         - SequentialLR with Linear warmup followed by CosineAnnealingLR
+    
     Arguments:
         optimiser: The PyTorch optimiser to attach the scheduler to.
         scheduler_config: A dictionary containing the scheduler configuration. See
@@ -79,7 +81,6 @@ def create_scheduler(optimiser, scheduler_config: dict | None, scheduler_object=
     Returns:
         A PyTorch learning rate scheduler instance, or None if scheduling is disabled.
     """
-    
     if not scheduler_config:
         return None
 
