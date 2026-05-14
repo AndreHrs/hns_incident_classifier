@@ -30,20 +30,24 @@ Requires **conda** and **Python 3.12 or higher**.
 
 ### Automatic (Recommended)
 
-> **Note:** The installer scripts are tested on Linux. They should also work on macOS, but this has not been verified.
+The installer detects your GPU, creates a conda environment named `hs_classifier`, installs all dependencies with the correct PyTorch build, and downloads the spaCy model.
 
-Run the installer once:
+**Linux / macOS**
+
+> Tested on Linux. Should also work on macOS, but this has not been verified.
 
 ```bash
-./install.sh
+./install.sh          # first-time setup
+./install.sh --force  # reinstall from scratch
 ```
 
-This will automatically detect your GPU, create a conda environment named `hs_classifier`, install all dependencies with the correct PyTorch build, and download the spaCy model.
+**Windows**
 
-To reinstall from scratch:
+> The `.bat` scripts are AI-converted from the tested `.sh` scripts and have **not** been tested. Use with caution.
 
-```bash
-./install.sh --force
+```bat
+install.bat           :: first-time setup
+install.bat --force   :: reinstall from scratch
 ```
 
 ### Manual
@@ -78,10 +82,16 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/rocm7
 
 ## Running the Web UI
 
-**Automatic (Recommended)** will run the installer first if not yet set up:
+**Linux / macOS (Recommended)** — runs the installer first if not yet set up:
 
 ```bash
 ./run_ui.sh
+```
+
+**Windows (untested, AI-converted):**
+
+```bat
+run_ui.bat
 ```
 
 **Manual:**
