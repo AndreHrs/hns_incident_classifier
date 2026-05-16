@@ -7,6 +7,7 @@ from .train import train
 
 __all__ = [
     "train",
+    "retrain",
     "load_model",
     "infer",
     "get_leaderboard",

@@ -77,12 +77,6 @@ def _build_train_config(
             batch_size=train_dl.batch_size,
             sampler=sampler,
         )
-
-    # # False means "no scheduler" (explicit opt-out); None means "use default"
-    # if scheduler is False:
-    #     scheduler = None
-    # elif scheduler is None:
-    #     scheduler = optim.lr_scheduler.StepLR(optimiser, step_size=1, gamma=0.95)
     
     scheduler_config = normalise_scheduler_config(
         scheduler=scheduler,

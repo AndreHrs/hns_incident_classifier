@@ -14,6 +14,10 @@ Includes:
 """
 
 import torch
+import pickle
+from typing import Any
+from pathlib import Path
+from datetime import datetime
 
 # GET CLASS NAME // Safely get the class name of an object, returning None if the object is None
 def _safe_class_name(obj):
@@ -38,33 +42,6 @@ def _serialise_value(value):
 
 
 # DATALOADER BATCH UNPACKING // unpack batches from the dataloader and prepare them for model input.
-# def _unpack_batch(batch, config):
-#     """Unpack a dataloader batch and move tensors to the configured device.
-
-#     Assumes batch structure: (D, DL, Energy, Risk) with length, or
-#     (D, _, Energy, Risk) without length.
-#     """
-#     device = config["device"]
-#     need_length = config["need_length"]
-#     energy_model = config["energy_model"]
-
-#     if need_length:
-#         D, DL, Energy, Risk = batch
-#         D = D.to(device)
-#         DL = DL.to(device)
-#         Energy = Energy.to(device)
-#         Risk = Risk.to(device)
-#         logits = config["model"](D, DL)
-#     else:
-#         D, _, Energy, Risk = batch
-#         D = D.to(device)
-#         Energy = Energy.to(device)
-#         Risk = Risk.to(device)
-#         logits = config["model"](D)
-
-#     targets = Energy if energy_model else Risk
-#     return logits, targets
-
 def _unpack_batch(batch, config):
     """Unpack a dataloader batch and move tensors to the configured device.
 
