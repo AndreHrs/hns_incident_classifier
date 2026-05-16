@@ -1,7 +1,7 @@
 """
-    _artifact_path_from_result:
+    artifact_path_from_result:
             Get the path to the artifacts pickle file from a training result dictionary.
-    _update_artifact_pickle:
+    update_artifact_pickle:
             Merge updates into the just-saved artifacts pickle file.
 """
 
@@ -12,12 +12,12 @@ from datetime import datetime
 
 
 # Helpers for updating runner artifact pickle files.
-def _artifact_path_from_result(result: dict[str, Any]) -> Path:
+def artifact_path_from_result(result: dict[str, Any]) -> Path:
     cfg = result["config"]
     return Path(cfg["save_dir"]) / f"{cfg['save_name']}_artifacts.pkl"
 
 
-def _update_artifact_pickle(result: dict[str, Any], updates: dict[str, Any]) -> None:
+def update_artifact_pickle(result: dict[str, Any], updates: dict[str, Any]) -> None:
     """Merge updates into the just-saved artifacts pickle."""
     path = _artifact_path_from_result(result)
 
