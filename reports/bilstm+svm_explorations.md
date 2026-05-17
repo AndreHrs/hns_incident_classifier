@@ -69,11 +69,11 @@ The hybrid approach was explored because traditional classifiers can sometimes o
 
 ## Experimental Findings
 
-| Model Variant | Best Validation F1 | Best Test F1 | General Observation |
-|---|---|---|---|
-| TF-IDF + SVM | Competitive baseline | Competitive baseline | Stable and consistent |
-| Vanilla Bi-LSTM | ~0.45 | <0.50 | Context-aware but unstable |
-| Bi-LSTM + SVM | <0.50 | <0.50 | Increased complexity with limited improvement |
+| Model Variant | run | Best Validation F1 | Best Test F1 | General Observation |
+|---|---|---|---|---|
+| TF-IDF + SVM |  |  | Stable and consistent |
+| Vanilla Bi-LSTM | 21 | 0.33 | 0.32 | Context-aware but unstable |
+| Bi-LSTM + SVM | 1 | 0.35 | 0.35 | Increased complexity with limited improvement |
 
 ### Key observations
 
@@ -110,6 +110,24 @@ Although Bi-LSTM-based approaches were able to model contextual sequence informa
 - larger pipeline complexity
 
 The hybrid Bi-LSTM + SVM pipeline in particular did not significantly outperform the simpler TF-IDF + SVM baseline.
+
+---
+
+## Experimental Branch Reference
+
+The experimental implementations explored during this investigation were retained in a separate development branch rather than merged into the final production pipeline.
+
+Relevant implementations, including:
+- Bi-LSTM exploration
+- Bi-LSTM + SVM feature extraction
+- TF-IDF + SVM experiments
+
+can be found in the following experimental branches:
+
+`feature/#91-svm-classifier`
+`feature/#59-model-bilstm`
+
+These implementations were preserved for future exploration and client reference.
 
 ---
 
