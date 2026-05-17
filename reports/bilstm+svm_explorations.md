@@ -126,6 +126,7 @@ can be found in the following experimental branches:
 
 `feature/#91-svm-classifier`
 `feature/#59-model-bilstm`
+`feature/TF-IDF+SVM`
 
 These implementations were preserved for future exploration and client reference.
 
