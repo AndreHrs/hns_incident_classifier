@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from .utility import _safe_class_name
+from .utility import _safe_class_name, _normalise_class_dict
 from modules.optimisation.loss import get_loss_function
 from .imbalance import make_weighted_sampler
 from modules.optimisation import normalise_scheduler_config, create_scheduler
@@ -128,6 +128,9 @@ def _build_train_config(
     else:
         save_name = model_type.lower().replace(" ", "_")
         run_name = f"{save_name}_run_{timestamp}"
+
+    # Normalise class_dict to ensure keys are integers and values are strings
+    class_dict = _normalise_class_dict(class_dict)
 
     # BUILD CONFIG DICTIONARY // Build the configuration dictionary with all training parameters and metadata
     config = {

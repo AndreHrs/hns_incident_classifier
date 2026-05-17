@@ -10,7 +10,7 @@ from .utility import _unpack_batch
 from .run_saving import RunSaver
 from modules.inference import run_inference
 
-FATAL_CLASSES = ["Single Fatality", "Multiple Fatality"]
+FATAL_CLASSES = ["Fatal", "Single Fatality", "Multiple Fatality"]
 
 _DEFAULT_REQUIREMENTS_PATH = Path(__file__).parents[2] / "config_requirement_check.json"
 

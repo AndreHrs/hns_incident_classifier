@@ -121,7 +121,7 @@ def training(
         epochs:              Number of training epochs.
         patience:            Early stopping patience in epochs.
         num_classes:         Number of output classes.
-        class_dict:          Dictionary mapping class indices to class names // i.e. class index -> class name
+        class_dict:          Dictionary mapping class indices to class names of shape {int : str} // i.e. class index -> class name
         clip_grad_max_norm:  Max norm for gradient clipping.
 
         best_metric:         Metric used to select the best model checkpoint.
