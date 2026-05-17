@@ -549,7 +549,6 @@ def tf_idf_continue_train(
     vocabulary are ignored. Use api.retrain.retrain(..., mode="refresh") when
     you want the vectorizer and embedding artifacts rebuilt from the new data.
     """
-
     cfg = {**_TFIDF_TRAIN_DEFAULTS, **(train_config or {})}
 
     artifacts = bundle["artifacts"]

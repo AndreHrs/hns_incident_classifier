@@ -11,6 +11,9 @@ import pandas as pd
 from api.loader import load_model
 from api.train import _rename_columns, train as train_from_splits
 
+from experiment_setup.bert_runner import bert_continue_train
+from experiment_setup.tf_idf_runner import tf_idf_continue_train
+
 
 Retrainer = Callable[
     [dict[str, Any], pd.DataFrame, pd.DataFrame, pd.DataFrame, str, dict[str, Any]],
@@ -114,7 +117,6 @@ def retrain(
     text_col: str | None = None,
     mode: str = "auto",
 ) -> dict[str, Any]:
-
     """Retrain or fine-tune a saved model directory.
 
     Args:
@@ -174,9 +176,6 @@ def retrain(
 
 # Register built-in retrainers for supported architectures.
 # extend with other architectures as needed, ensuring that the retrainer function is implemented and imported correctly in this module.
-from experiment_setup.bert_runner import bert_continue_train
-from experiment_setup.tf_idf_runner import tf_idf_continue_train
-
 register_retrainer("bert", bert_continue_train)
 register_retrainer("tf_idf", tf_idf_continue_train)
 
