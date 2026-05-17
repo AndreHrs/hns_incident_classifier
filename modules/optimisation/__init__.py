@@ -2,10 +2,13 @@
 
 from .scheduler_factory import normalise_scheduler_config, create_scheduler
 from .loss import get_loss_function, FocalLoss
+from .optimiser_factory import normalise_optimiser_config, create_optimiser
 
 __all__ = [
     "normalise_scheduler_config",
     "create_scheduler",
     "get_loss_function",
     "FocalLoss",
+    "normalise_optimiser_config",
+    "create_optimiser",
 ]
