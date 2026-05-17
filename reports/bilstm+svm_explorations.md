@@ -71,7 +71,7 @@ The hybrid approach was explored because traditional classifiers can sometimes o
 
 | Model Variant | run | Best Validation F1 | Best Test F1 | General Observation |
 |---|---|---|---|---|
-| TF-IDF + SVM |  |  | Stable and consistent |
+| TF-IDF + SVM | 1 | 0.60 | | 0.59 | Stable and consistent |
 | Vanilla Bi-LSTM | 21 | 0.33 | 0.32 | Context-aware but unstable |
 | Bi-LSTM + SVM | 1 | 0.35 | 0.35 | Increased complexity with limited improvement |
 
