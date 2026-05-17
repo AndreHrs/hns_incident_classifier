@@ -8,9 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from .utility import _safe_class_name, _normalise_class_dict
-from modules.optimisation.loss import get_loss_function
-from .imbalance import make_weighted_sampler
-from modules.optimisation import normalise_scheduler_config, create_scheduler
+from modules.optimisation import normalise_scheduler_config, create_scheduler, get_loss_function, make_weighted_sampler
 
 
 # CONFIG AND UTILITY FUNCTIONS FOR TRAINING LOOP
