@@ -62,10 +62,19 @@ def _build_train_config(
     # Generate a timestamp for unique run identification and directory naming
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    # DEFAULT OPTIMISER, SCHEDULER, CRITERION // Set default optimiser, scheduler, and criterion if not provided
-    if optimiser is None:
-        lr = optimiser_args.get("lr", 1e-3) if optimiser_args else 1e-3
-        optimiser = optim.Adam(model.parameters(), lr=lr)
+    # Optimiser
+    optimiser_config = normalise_optimiser_config(
+        optimiser=optimiser,
+        optimiser_args=optimiser_args,
+    )
+    
+    optimiser_object = optimiser
+    
+    optimiser = create_optimiser(
+        parameters=model.parameters(),
+        optimiser_config=optimiser_config,
+        optimiser_object=optimiser_object,
+    )
 
 
     if use_weighted_sampler and train_labels is not None:
