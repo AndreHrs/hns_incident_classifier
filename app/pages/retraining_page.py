@@ -555,7 +555,7 @@ if st.button("Retrain Model", type="primary"):
 
     cfg.update(extra_cfg)
 
-    from api.retrain import retrain
+    from api import retrain
 
     with st.spinner("Retraining in progress…"):
         try:
@@ -606,6 +606,3 @@ if st.button("Retrain Model", type="primary"):
                     st.metric(label, f"{float(value):.4f}")
                 except Exception:
                     st.metric(label, str(value))
-
-    with st.expander("Full retraining summary"):
-        st.json(_safe_for_json(result))
