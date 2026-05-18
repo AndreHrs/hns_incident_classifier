@@ -555,11 +555,11 @@ if st.button("Retrain Model", type="primary"):
 
     cfg.update(extra_cfg)
 
-    from api import retrain
+    import api
 
     with st.spinner("Retraining in progress…"):
         try:
-            result = retrain(
+            result = api.retrain(
                 model_dir=str(selected_model_dir),
                 train_path=train_path,
                 valid_path=valid_path,

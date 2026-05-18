@@ -170,11 +170,11 @@ def _build_model(
         dropout = float(artifacts.get("dropout", 0.2))
         num_classes = int(artifacts["label_enc"].num_classes)
 
-        tokeniser_name = artifacts.get("tokeniser_name")
+        tokenizer_name = artifacts.get("tokenizer_name")
 
         bert_cfg = BertEmbeddingConfig(
             model_name=model_name,
-            tokeniser_name=tokeniser_name,
+            tokenizer_name=tokenizer_name,
             max_length=max_length,
             dropout=0.1,
             pooling=pooling,
