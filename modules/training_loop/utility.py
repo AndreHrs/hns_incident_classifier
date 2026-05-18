@@ -138,7 +138,6 @@ def _is_better(current, best, mode):
             return current > best
         return False
 
-
 # If the class_dict provided in the config has string keys, convert them to integers for consistent processing later on
 # normalises class_dict shape to be {int : str} (i.e. class index -> class name) if it is currently {str : str}
 def _normalise_class_dict(class_dict: dict[str, str]) -> dict[int, str]:

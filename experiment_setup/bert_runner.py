@@ -20,7 +20,7 @@ def _label_encoder_from_class_dict(class_dict: dict) -> LabelEncoder:
 
 _BERT_DEFAULTS = {
     "model_type": "bert-base-uncased",                 # remove from config after refactor
-    "tokenizer_name": "bert-base-uncased-tokeniser",   # similarly, make passable to model/artifacts instead of setting in config
+    "tokenizer_name": None,
     "run_name": "bert_run",
     "fine_tune": False,
     "pooling": "mean",
@@ -108,7 +108,7 @@ def bert_train(
             "label_enc": _label_encoder_from_class_dict(dict(result["config"]["class_dict"])),
             "max_length": cfg["max_length"],
             "model_name": cfg["model_type"],
-            "tokenizer_name": cfg.get("tokenizer_name", cfg["model_type"]),
+            "tokenizer_name": cfg.get("tokenizer_name") or cfg["model_type"],
             "pooling": cfg["pooling"],
             "fine_tune": cfg["fine_tune"],
             "dropout": cfg["dropout"],
