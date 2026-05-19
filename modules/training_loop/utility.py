@@ -11,6 +11,8 @@ Includes:
             Get the learning rates from the optimizer's parameter groups
     _is_better: 
             Compare the current metric value to the best metric value based on the specified mode (min or max)
+    _normalise_class_dict:
+            Convert a class dictionary with string index keys to integer index keys.
 """
 
 import torch
@@ -135,3 +137,32 @@ def _is_better(current, best, mode):
         if mode == "max":
             return current > best
         return False
+
+# If the class_dict provided in the config has string keys, convert them to integers for consistent processing later on
+# normalises class_dict shape to be {int : str} (i.e. class index -> class name) if it is currently {str : str}
+def _normalise_class_dict(class_dict: dict[str, str]) -> dict[int, str]:
+    """Convert a class dictionary with string index keys to integer index keys.
+
+    Example:
+        {"0": "Low", "1": "Medium"} -> {0: "Low", 1: "Medium"}
+
+    Args:
+        class_dict: Dictionary mapping string class indexes to class names.
+
+    Returns:
+        Dictionary mapping integer class indexes to class names.
+
+    Raises:
+        ValueError: If any key cannot be converted to an integer.
+    """
+    normalised: dict[int, str] = {}
+
+    for key, value in class_dict.items():
+        try:
+            int_key = int(key)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"class_dict key {key!r} cannot be converted to int") from exc
+
+        normalised[int_key] = value
+
+    return normalised
