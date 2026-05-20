@@ -69,7 +69,7 @@ The hybrid approach was explored because traditional classifiers can sometimes o
 
 ## Experimental Findings
 
-| Model Variant | run | Best Validation F1 | Best Test F1 | General Observation |
+| Model Variant | run | Best Validation F1 macro | Best Test F1 macro | General Observation |
 |---|---|---|---|---|
 | TF-IDF + SVM | 1 | 0.60 | | 0.59 | Stable and consistent |
 | Vanilla Bi-LSTM | 21 | 0.33 | 0.32 | Context-aware but unstable |
@@ -122,11 +122,9 @@ Relevant implementations, including:
 - Bi-LSTM + SVM feature extraction
 - TF-IDF + SVM experiments
 
-can be found in the following experimental branches:
+can be found in the following experimental branche:
 
-`feature/#91-svm-classifier`
-`feature/#59-model-bilstm`
-`feature/TF-IDF+SVM`
+`feature/Explorations`
 
 These implementations were preserved for future exploration and client reference.
 
