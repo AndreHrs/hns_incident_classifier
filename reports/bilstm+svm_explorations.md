@@ -122,7 +122,7 @@ Relevant implementations, including:
 - Bi-LSTM + SVM feature extraction
 - TF-IDF + SVM experiments
 
-can be found in the following experimental branche:
+can be found in the following experimental branch:
 
 `feature/Explorations`
 
