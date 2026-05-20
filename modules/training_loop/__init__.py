@@ -91,11 +91,11 @@ def training(
         need_length:    Whether the model expects sequence lengths as input.
 
         optimiser:      Optimiser configuration.
-            Acceptable values:
-            - None (uses default Adam optimiser)
-            - str optimiser name
-            - configuration dictionary
-            - torch.optim.Optimizer object
+                        Acceptable values:
+                                - None (uses default Adam optimiser)
+                                - str optimiser name
+                                - configuration dictionary
+                                - torch.optim.Optimizer object
         optimiser_args: Dictionary of additional arguments for the optimizer.
 
         scheduler:                  Learning rate scheduler. Defaults to StepLR.

@@ -138,8 +138,8 @@ def _is_better(current, best, mode):
             return current > best
         return False
 
-# If the class_dict provided in the config has string keys, convert them to integers for consistent processing later on
-# normalises class_dict shape to be {int : str} (i.e. class index -> class name) if it is currently {str : str}
+
+# NORMALISE DICT // ensure class_dict shape to be {int : str} (i.e. class index -> class name) if it is currently {str : str}
 def _normalise_class_dict(class_dict: dict[str, str]) -> dict[int, str]:
     """Convert a class dictionary with string index keys to integer index keys.
 
@@ -166,3 +166,103 @@ def _normalise_class_dict(class_dict: dict[str, str]) -> dict[int, str]:
         normalised[int_key] = value
 
     return normalised
+
+
+# DISPLAY NAME RESOLUTION // Resolve a display name from int-keyed or str-keyed class dictionaries.
+def _class_name_for_index(class_dict, class_idx):
+    """Resolve a display name from int-keyed or str-keyed class dictionaries.
+    
+    Args:
+        class_dict: Dictionary mapping class indices (int or str) to class names.
+        class_idx: The integer index of the class for which to retrieve the name.
+    
+    Returns:
+        The class name corresponding to the given class index, or a default name if not found.
+    """
+    class_dict = class_dict or {}
+
+    if class_idx in class_dict:
+        return str(class_dict[class_idx])
+
+    str_idx = str(class_idx)
+    if str_idx in class_dict:
+        return str(class_dict[str_idx])
+
+    normalised = _normalise_class_dict(class_dict)
+    return str(normalised.get(class_idx, f"class_{class_idx}"))
+
+
+# GET CLASS NAMES IN ORDER // Return class names in class-index order for plotting labels in run_saving.py
+def _ordered_class_names(class_dict, num_classes):
+    """Return class names in class-index order for plotting labels.
+    
+    Args:
+        class_dict: Dictionary mapping class indices (int or str) to class names.
+        num_classes: Total number of classes, used to determine the range of class indices.
+    
+    Returns:
+        A list of class names ordered by their class index, using the provided class_dict for name resolution.
+    """
+    return [_class_name_for_index(class_dict, idx) for idx in range(num_classes)]
+
+
+# INFER NUMBER OF CLASSES // Infer the number of classes for class-wise plots
+def _infer_num_classes_from_history(class_metrics_history, class_dict=None):
+    """Infer the number of classes for class-wise plots.
+    
+    Args:
+        class_metrics_history: A list of dictionaries containing class metrics for each epoch.
+        class_dict: Optional dictionary mapping class indices to class names.
+    
+    Returns:
+        The inferred number of classes based on the class_dict or class_metrics_history.
+    """
+    normalised = _normalise_class_dict(class_dict)
+
+    int_keys = [k for k in normalised if isinstance(k, int)]
+    if int_keys:
+        return max(int_keys) + 1
+
+    if class_metrics_history and isinstance(class_metrics_history[0], dict):
+        return len(class_metrics_history[0])
+
+    return 0
+
+
+# EXTRACT CLASS METRICS // Extract class metrics from epoch metrics using current and legacy key names.
+def _get_class_metric_value(epoch_metrics, class_idx, class_name, metric):
+    """Read a class metric using current and legacy history key names.
+
+    Current histories use the real class name, e.g. "Single Fatality".
+    Older/broken histories may use "class_0" because class_dict lookup failed.
+    This helper lets the plots display class_dict names while still reading
+    metric values from those older histories.
+
+    Args:
+        epoch_metrics: Dictionary of metrics for the current epoch, which may contain class metrics under various key formats.
+        class_idx: The integer index of the class for which to retrieve the metric.
+        class_name: The display name of the class for which to retrieve the metric.
+        metric: The specific metric name to retrieve (e.g., "f1", "precision", "recall").
+    
+    Returns:
+        The value of the specified metric for the given class, or 0.0 if not found or if value cannot be converted to float.
+    """
+    if not isinstance(epoch_metrics, dict):
+        return 0.0
+
+    candidate_keys = (
+        class_name,
+        f"class_{class_idx}",
+        class_idx,
+        str(class_idx),
+    )
+
+    for key in candidate_keys:
+        class_block = epoch_metrics.get(key)
+        if isinstance(class_block, dict) and metric in class_block:
+            try:
+                return float(class_block[metric])
+            except (TypeError, ValueError):
+                return 0.0
+
+    return 0.0
