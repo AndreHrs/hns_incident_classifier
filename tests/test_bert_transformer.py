@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 
 from modules.encoding.label_encoder import LabelEncoder
 from modules.data_loader.bert_loader import BertTextDataset, df_to_bert_dataloader
-from modules.models.bert_classifier import BertClassifier
+from implementations.bert_classifier import BertClassifier
 from implementations.bert_transformer import encode_label_column
 
 

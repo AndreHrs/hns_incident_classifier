@@ -266,7 +266,7 @@ def bert_continue_train(
     from modules.embedding.bert_config import BertEmbeddingConfig
     from modules.embedding.bert_tokenizer import BertTokenizerWrapper
     from modules.embedding.bert_embedding import BertEmbeddingBackend
-    from modules.models.bert_classifier import BertClassifier
+    from implementations.bert_classifier import BertClassifier
     from modules.training_loop import training
     from implementations.bert_transformer import get_best_available_device, build_class_weights
 

@@ -10,7 +10,7 @@ from modules.embedding.bert_config import BertEmbeddingConfig
 from modules.embedding.bert_tokenizer import BertTokenizerWrapper
 from modules.embedding.bert_embedding import BertEmbeddingBackend
 from modules.encoding.label_encoder import LabelEncoder
-from modules.models.bert_classifier import BertClassifier
+from implementations.bert_classifier import BertClassifier
 from modules.training_loop import training
 
 BEST_SAFETYBERT_CONFIG = {

@@ -22,7 +22,7 @@ class BertClassifier(nn.Module):
         dropout: float = 0.2,
     ) -> None:
         """Initialize the BERT classifier with the given embedding backend, number of classes, and dropout rate.
-        
+
         :param embedding_backend: Pre-trained BERT embedding backend to use for obtaining sentence embeddings.
         :type embedding_backend: BertEmbeddingBackend
         :param num_classes: Number of target classes for classification.
@@ -40,7 +40,7 @@ class BertClassifier(nn.Module):
 
     def forward(self, input_ids, attention_mask, token_type_ids=None):
         """Compute class logits for a batch of tokenized inputs.
-        
+
         :param input_ids: Tensor of token IDs.
         :type input_ids: torch.Tensor
         :param attention_mask: Tensor of attention masks.
