@@ -2,31 +2,27 @@
 """RUN SAVING UTILITIES.
 
 Includes:
-    RunSaver class: Encapsulates history management, metrics appending, artifact saving, and plotting.
+    RunSaver class: Encapsulates history management and metric plotting.
         _initialise_history:    Initializes the history dictionary to store training and validation metrics.
-        create_directory:       Creates a directory for saving run artifacts based on the current timestamp. 
         append_metrics:         Appends the metrics for the current epoch to the history dictionary.
-        save_artifacts:         Saves the best model state dict and run summary to disk.
         plot_confusion_matrix:  Plots a confusion matrix as a heatmap.
-        plot_base_metrics:      Plots a single metric for training and validation over epochs.
+        plot_combined_metrics:  Plots multiple metrics for training and validation over epochs.
         plot_history:           Generates and saves plots for each metric in the history, including combined plots and class-specific metrics.
 
 """
 
-import json
 import math
-import torch
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
 from pathlib import Path
 
-from .utility import _serialise_value, _ordered_class_names, _infer_num_classes_from_history, _get_class_metric_value
+from .utility import _ordered_class_names, _infer_num_classes_from_history, _get_class_metric_value
 
 
 class RunSaver:
-    """Encapsulate training history, artifact saving, and metric plotting."""
+    """Encapsulate training history and metric plotting."""
 
     def __init__(self):
         """Initialize RunSaver with an empty history dictionary."""
@@ -92,16 +88,6 @@ class RunSaver:
         }
 
 
-    # CREATE DIRECTORY // Create a directory for saving run artifacts based on the current timestamp
-    def create_directory(self, config):
-        """Create a directory for saving run artifacts."""
-        parent_dir = Path(config["parent_dir"])
-        save_dir = parent_dir / f"{config['timestamp']}_{config['save_name']}"
-        save_dir.mkdir(parents=True, exist_ok=True)
-        config["save_dir"] = save_dir  # Add save_dir to config for later use
-        return save_dir
-
-
     # APPEND METRICS TO HISTORY // Append the metrics for the current epoch to the history dictionary
     def append_metrics(self, section, metrics, training=True):
         """Append the metrics for the current epoch to the history dictionary."""
@@ -110,66 +96,17 @@ class RunSaver:
             history_section = self.history["training"][section]
         else:
             history_section = self.history[section]
-        
+
         # Append each metric to the corresponding list in the history dictionary
         for key in history_section.keys():
             if key in metrics:
                 history_section[key].append(metrics[key])
 
 
-    # SAVE RUN ARTIFACTS // Save the best model state dict and run summary to disk
-    def save_artifacts(self, config, run_summary):
-        """Save the best model state dict and run summary JSON to disk."""
-        model_path = config["save_dir"] / f"{config['save_name']}_model.pt"
-        history_path = config["save_dir"] / f"{config['save_name']}_history.pt"
-        summary_path = config["save_dir"] / f"{config['save_name']}_run_summary.json"
-
-        torch.save(run_summary["best_model_state_dict"], model_path)
-        torch.save(run_summary["history"], history_path)
-
-        serialisable_config = {
-            k: _serialise_value(v)
-            for k, v in config.items()
-            if k
-            not in {
-                "model",
-                "train_dl",
-                "valid_dl",
-                "test_dl",
-                "optimiser",
-                "scheduler",
-                "criterion",
-            }
-        }
-
-        serialisable_config["metadata"] = {
-            **serialisable_config.get("metadata", {}),
-            "optimiser_defaults": _serialise_value(
-                config["optimiser"].defaults
-                if config["optimiser"] is not None
-                else None
-            ),
-        }
-
-        serialisable_summary = {
-            "config": serialisable_config,
-            "best_epoch": run_summary["best_epoch"],
-            "best_metric_name": run_summary["best_metric_name"],
-            "best_metric_value": run_summary["best_metric_value"],
-            "training_time_sec": run_summary["training_time_sec"],
-            "history": _serialise_value(run_summary["history"]),
-        }
-
-        with open(summary_path, "w", encoding="utf-8") as f:
-            json.dump(serialisable_summary, f, indent=2)
-
-        return str(model_path), str(summary_path)
-
-
     # PLOT CONFUSION MATRIX // Plot a confusion matrix as a heatmap
     def plot_confusion_matrix(self, cm, save_path, class_dict=None):
         """Plot and save a confusion matrix as a heatmap.
-        
+
         Args:
             cm: Confusion matrix as a 2D list or numpy array.
             save_path: Path to save the confusion matrix plot.
@@ -177,10 +114,10 @@ class RunSaver:
         """
         cm = np.array(cm)
         num_classes = cm.shape[0]
-        
+
         # Get class labels
         labels = _ordered_class_names(class_dict, num_classes)
-        
+
         plt.figure(figsize=(10, 8))
         sns.heatmap(
             cm,
@@ -202,7 +139,7 @@ class RunSaver:
 
 
     # PLOT METRICS // Generate and save plots for each metric in the history
-    def plot_combined_metrics(self, title, metrics, x_values, best_epoch, plot_path, range_0_1, x_max, 
+    def plot_combined_metrics(self, title, metrics, x_values, best_epoch, plot_path, range_0_1, x_max,
                                 class_name=None, class_idx=None, train_class_metrics=None, val_class_metrics=None):
         """Plot metrics listed in 'metrics' for training and validation over epochs."""
         # Colours for metrics
@@ -266,11 +203,21 @@ class RunSaver:
 
 
     # PLOT HISTORY // Generate and save plots for each metric in the history
-    def plot_history(self, best_epoch, config):
-        """Generate and save per-metric and combined plots from training history."""
-        # Make a "plots" subdirectory for all plots in save_dir
-        save_dir = Path(config["save_dir"])          # Use the save_dir from config as parent
-        plot_dir = save_dir / "plot_metrics"                
+    def plot_history(self, best_epoch, config, plot_dir=None):
+        """Generate and save per-metric and combined plots from training history.
+
+        Args:
+            best_epoch: The epoch number of the best model checkpoint.
+            config: Training configuration dictionary. Used for save_name, class_dict,
+                and (if plot_dir is None) save_dir as a fallback.
+            plot_dir: Directory to write plots into. If None, falls back to a
+                plot_metrics/ subdirectory inside config["save_dir"].
+        """
+        if plot_dir is not None:
+            plot_dir = Path(plot_dir)
+        else:
+            save_dir = Path(config["save_dir"])
+            plot_dir = save_dir / "plot_metrics"
         plot_dir.mkdir(parents=True, exist_ok=True)
 
         # Extract config values frequently needed for plotting
@@ -283,7 +230,7 @@ class RunSaver:
         x_values = list(int(x) for x in range(1, num_epochs + 1))
 
 
-        # COMBINED PLOTS // Plot multiple metrics together for easier comparison:     
+        # COMBINED PLOTS // Plot multiple metrics together for easier comparison:
         # - Macro metrics plot: accuracy, precision_macro, recall_macro, f1_macro
         macro_metrics = ["precision_macro", "recall_macro", "f1_macro", "accuracy"]
         plot_path = Path(plot_dir) / f"{save_name}_combined_macro_metrics_plot.png"
@@ -309,7 +256,7 @@ class RunSaver:
             lr_metrics = ["lr"]
             plot_path = Path(plot_dir) / f"{save_name}_learning_rate_plot.png"
             title = "Learning Rate over Epochs"
-            self.plot_combined_metrics(title, lr_metrics, x_values, best_epoch, plot_path, False, x_max)        
+            self.plot_combined_metrics(title, lr_metrics, x_values, best_epoch, plot_path, False, x_max)
 
 
         # PLOT CLASS-SPECIFIC METRICS // if class-specific metrics available
@@ -323,7 +270,7 @@ class RunSaver:
 
             num_classes = _infer_num_classes_from_history(train_class_metrics, class_dict)
             class_names = _ordered_class_names(class_dict, num_classes)
-            
+
             # For each metric (precision, recall, f1), create per-class plots.
             # Legends always use class_dict names. Values are read from current
             # class-name keys, with fallback support for older "class_N" histories.
@@ -333,7 +280,7 @@ class RunSaver:
                 plot_path = Path(class_dir) / f"{save_name}_{save_class_name}_metrics_plot.png"
                 title = f"{class_name} Class metrics over Epochs"
 
-                self.plot_combined_metrics(title, metrics, x_values, best_epoch, plot_path, True, x_max, 
+                self.plot_combined_metrics(title, metrics, x_values, best_epoch, plot_path, True, x_max,
                                         class_name, class_idx, train_class_metrics, val_class_metrics)
 
 
@@ -352,4 +299,3 @@ class RunSaver:
             test_cm = test_confusion_matrices[-1] if isinstance(test_confusion_matrices, list) else test_confusion_matrices
             test_cm_path = Path(plot_dir) / f"{save_name}_confusion_matrix_test.png"
             self.plot_confusion_matrix(test_cm, test_cm_path, class_dict=class_dict)
-

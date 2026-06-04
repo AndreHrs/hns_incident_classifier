@@ -77,8 +77,7 @@ def training(
     extra_config=None,
     requirements={},
     #
-    log_leaderboard=True,
-    leaderboard_dir="leaderboard",
+    mlflow_experiment=None,
     verbose=True,
     **_,
 ):
@@ -140,8 +139,8 @@ def training(
                 - fatal_accuracy: min recall on true fatal-class samples (default 0.95)
                 - f1_target: {class_index: min_f1} — use 0.0 to mark a class as having no target
         
-        log_leaderboard:    Whether to append this run to the leaderboard CSV. Defaults to True. // If True, requires save to be True for logging.
-        leaderboard_dir:    Directory for leaderboard.csv and owner.conf. Defaults to 'leaderboard'.
+        mlflow_experiment:  MLflow experiment name to log runs under. If None, falls back to
+                            config["metadata"]["target"] or "default".
         verbose:            Enable printing the training loop message. Defaults to True.
 
     Returns:
@@ -196,8 +195,7 @@ def training(
         requirements=requirements,
     )
 
-    train_config["log_leaderboard"] = log_leaderboard
-    train_config["leaderboard_dir"] = leaderboard_dir
+    train_config["mlflow_experiment"] = mlflow_experiment
     train_config["verbose"] = verbose
 
     return train_model_loop(train_config)

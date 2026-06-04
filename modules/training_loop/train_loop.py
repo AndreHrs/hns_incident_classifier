@@ -1,6 +1,7 @@
-"""Main training loop with early stopping and artifact saving."""
+"""Main training loop with early stopping and MLflow artifact logging."""
 
 import copy
+import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
@@ -8,15 +9,15 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import mlflow
+import mlflow.pytorch
 
 from .one_epoch import train_one_epoch
 from .validation import validate
 from .run_saving import RunSaver
 from .utility import _safe_class_name, _serialise_value, _is_better
 from .evaluate import evaluate
-from ..leaderboard import log_run
 from ..optimisation.scheduler import step_scheduler
-from ..leaderboard import log_run, log_search_run
 
 
 #  MAIN TRAINING LOOP // ensures all control variables are consistent // compatible with Dataloader-based pipelines
@@ -34,7 +35,6 @@ def train_model_loop(
         best model state dict, and total training time.
     """
     run_saver = RunSaver()
-    config["save_dir"] = run_saver.create_directory(config)
 
     patience_counter = 0
     best_metric_value = None
@@ -59,7 +59,7 @@ def train_model_loop(
 
         train_metrics = train_one_epoch(config)
         val_metrics = validate(config)
-        
+
         if config["scheduler"] is not None and not config["scheduler_step_per_batch"]:
             step_scheduler(
                 scheduler=config["scheduler"],
@@ -71,6 +71,18 @@ def train_model_loop(
 
         run_saver.append_metrics("train", train_metrics)
         run_saver.append_metrics("val", val_metrics)
+
+        mlflow.log_metrics({
+            "train_loss": train_metrics["loss"],
+            "train_accuracy": train_metrics["accuracy"],
+            "train_f1_macro": train_metrics["f1_macro"],
+            "val_loss": val_metrics["loss"],
+            "val_accuracy": val_metrics["accuracy"],
+            "val_f1_macro": val_metrics["f1_macro"],
+            "val_f1_weighted": val_metrics["f1_weighted"],
+            "val_precision_macro": val_metrics["precision_macro"],
+            "val_recall_macro": val_metrics["recall_macro"],
+        }, step=epoch)
 
         current_metric_value = val_metrics[config["best_metric"]]
 
@@ -113,7 +125,7 @@ def train_model_loop(
     test_metrics = evaluate(config)
     run_saver.append_metrics("test", test_metrics, training=False)
 
-    # Prepare run_summary for saving
+    # Prepare run_summary
     run_summary = {
         "config": config,
         "history": run_saver.history,
@@ -124,34 +136,85 @@ def train_model_loop(
         "training_time_sec": total_train_time,
     }
 
+    # Determine experiment name from config (separate experiment per target/task)
+    experiment_name = config.get("mlflow_experiment") or config.get("metadata", {}).get("target") or "default"
+    mlflow.set_experiment(experiment_name)
+
     if config["save"] and best_model_state_dict is not None:
-        model_path, summary_path = run_saver.save_artifacts(
-            config, run_summary
-        )
-        run_saver.plot_history(best_epoch, config)
+        with mlflow.start_run(run_name=config["run_name"]):
+            # --- Params ---
+            optimiser = config.get("optimiser")
+            try:
+                lr = optimiser.defaults.get("lr") if optimiser is not None else None
+            except Exception:
+                lr = None
+            metadata = config.get("metadata", {})
 
-        if config.get("log_leaderboard", True):
-            if config.get("is_hyperparameter_search", False):
-                log_search_run(
-                    run_summary=run_summary,
-                    config=config,
-                    model_path=model_path,
-                    leaderboard_dir=config.get("leaderboard_dir", "leaderboard"),
-                )
-            else:
-                log_run(
-                    run_summary=run_summary,
-                    config=config,
-                    model_path=model_path,
-                    leaderboard_dir=config.get("leaderboard_dir", "leaderboard"),
-                )
+            mlflow.log_params({
+                "model_type": config.get("model_type"),
+                "model_class": metadata.get("model_class"),
+                "optimiser_class": metadata.get("optimiser_class"),
+                "scheduler_class": metadata.get("scheduler_class"),
+                "criterion_class": metadata.get("criterion_class"),
+                "criterion_type": config.get("criterion_type"),
+                "lr": lr,
+                "epochs_max": config.get("epochs"),
+                "patience": config.get("patience"),
+                "clip_grad_max_norm": config.get("clip_grad_max_norm"),
+                "scheduler_step_per_batch": config.get("scheduler_step_per_batch"),
+                "energy_model": config.get("energy_model"),
+                "target": experiment_name,
+                "search_parameters": str(config.get("parameters", {})),
+                "is_hyperparameter_search": config.get("is_hyperparameter_search", False),
+            })
 
-        if verbose:
-            print(f"Run saved to: {config['save_dir']}")
-            print(f"Total training time: {total_train_time:.4f}s")
-            print(f"Best epoch: {best_epoch}")
-            print(f"Best {config['best_metric']}: {best_metric_value:.6f}")
-            print(f"Model saved to: {model_path}")
-            print(f"Run summary saved to: {summary_path}")
+            # --- Summary metrics ---
+            history = run_saver.history
+            val_history = history.get("training", {}).get("val", {})
+            test_history = history.get("test", {})
+            idx = best_epoch - 1
+
+            def _at_best(metric):
+                vals = val_history.get(metric, [])
+                return vals[idx] if idx < len(vals) else None
+
+            def _last_test(metric):
+                vals = test_history.get(metric, [])
+                return vals[-1] if vals else None
+
+            summary_metrics = {
+                "best_epoch": best_epoch,
+                "best_metric_value": best_metric_value,
+                "training_time_sec": total_train_time,
+            }
+            for m in ("loss", "accuracy", "f1_macro", "f1_weighted", "precision_macro", "recall_macro"):
+                v = _at_best(m)
+                if v is not None:
+                    summary_metrics[f"best_val_{m}"] = v
+            for m in ("loss", "accuracy", "f1_macro", "f1_weighted", "precision_macro", "recall_macro",
+                       "auto_classification_rate", "fatal_flag_rate", "fatal_accuracy",
+                       "confidence_high_rate", "confidence_medium_rate", "confidence_low_rate"):
+                v = _last_test(m)
+                if v is not None:
+                    summary_metrics[f"test_{m}"] = v
+            for flag in ("req_high_confidence_met", "req_fatal_accuracy_met", "req_all_f1_targets_met"):
+                v = _last_test(flag)
+                if v is not None:
+                    summary_metrics[flag] = int(v) if isinstance(v, bool) else v
+            mlflow.log_metrics(summary_metrics)
+
+            # --- Model ---
+            mlflow.pytorch.log_model(config["model"], "model")
+
+            # --- Plots ---
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                run_saver.plot_history(best_epoch, config, plot_dir=tmp_dir)
+                mlflow.log_artifacts(tmp_dir, artifact_path="plots")
+
+            if verbose:
+                print(f"MLflow run logged: experiment='{experiment_name}', run='{config['run_name']}'")
+                print(f"Total training time: {total_train_time:.4f}s")
+                print(f"Best epoch: {best_epoch}")
+                print(f"Best {config['best_metric']}: {best_metric_value:.6f}")
 
     return run_summary
