@@ -13,4 +13,5 @@ numpy
 streamlit>=1.35
 scikit-learn
 optuna
+mlflow
 sphinx
