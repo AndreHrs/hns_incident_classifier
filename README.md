@@ -1,4 +1,10 @@
-# Capstone Project — Incident Classifier
+# HnS Incident Classifier
+
+> **Personal fork** of my group's Capstone project at
+> [Mars-Martiny/CITS5206_group1](https://github.com/Mars-Martiny/CITS5206_group1).
+> This fork exists purely as a learning exercise to explore how MLflow can be
+> integrated into an existing ML codebase to track experiments, store artifacts,
+> and serve as a model registry.
 
 Requires **conda** and **Python 3.12 or higher**.
 
