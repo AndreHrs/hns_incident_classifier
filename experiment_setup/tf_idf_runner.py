@@ -2,17 +2,28 @@
 
 import json
 import pickle
-import torch
+import tempfile
 from pathlib import Path
+import torch
+
+import mlflow
 
 from implementations.tf_idf import TFIDFClassifier, TFIDFVectorizer, build_tfidf_dataloader
 from modules.training_loop import training
 from modules.encoding import LabelEncoder
 from modules import OneTextPreProcessor
 from modules.embedding.safety_bert_static import get_safety_bert_embedding_matrix
-from experiment_setup.artifact_utils import update_artifact_pickle
 
 _COLUMN_MAP_PATH = Path(__file__).parent.parent / "column_map.json"
+
+
+def _log_artifacts_to_mlflow(run_id: str, artifacts: dict) -> None:
+    client = mlflow.tracking.MlflowClient()
+    with tempfile.TemporaryDirectory() as tmp:
+        pkl_path = f"{tmp}/artifacts.pkl"
+        with open(pkl_path, "wb") as f:
+            pickle.dump(artifacts, f)
+        client.log_artifact(run_id, pkl_path)
 
 
 def _load_column_map():
@@ -280,10 +291,10 @@ def tf_idf_train(
         artifact_extras is not None
         and result.get("best_model_state_dict") is not None
         and result["config"].get("save")
+        and result.get("mlflow_run_id")
     ):
-        save_dir = Path(result["config"]["save_dir"])
-        save_name = result["config"]["save_name"]
         artifacts = {
+            "model_type": "tf_idf",
             "vectorizer": vectorizer,
             "label_enc": label_enc,
             "energy_model": energy_model,
@@ -299,9 +310,7 @@ def tf_idf_train(
         if embedding_matrix_to_save is not None:
             artifacts["embedding_matrix"] = embedding_matrix_to_save
 
-        artifact_path = save_dir / f"{save_name}_artifacts.pkl"
-        with open(artifact_path, "wb") as af:
-            pickle.dump(artifacts, af)
+        _log_artifacts_to_mlflow(result["mlflow_run_id"], artifacts)
 
     return result
 
@@ -503,7 +512,6 @@ def tf_idf_hparam_search(
             "patience": 15,
             "best_metric": "f1_macro",
             "save": True,
-            "log_leaderboard": True,
             "verbose": False,
             # Added for test with safety bert
             # "feature_representation": "tfidf_embed_avg",
@@ -661,13 +669,15 @@ def tf_idf_continue_train(
         **cfg,
     )
 
-    if result.get("best_model_state_dict") is not None and result["config"].get("save"):
-        save_dir = Path(result["config"]["save_dir"])
-        save_name = result["config"]["save_name"]
-
+    if (
+        result.get("best_model_state_dict") is not None
+        and result["config"].get("save")
+        and result.get("mlflow_run_id")
+    ):
         updated_artifacts = dict(artifacts)
         updated_artifacts.update(
             {
+                "model_type": "tf_idf",
                 "vectorizer": vectorizer,
                 "label_enc": label_enc,
                 "energy_model": energy_model,
@@ -677,7 +687,7 @@ def tf_idf_continue_train(
                 "lemma_config": lemma_config,
                 "keep_numbers": keep_numbers,
                 "input_dim": int(train_vecs.shape[1]),
-                "base_model_dir": old_config.get("save_dir"),
+                "base_run_id": old_config.get("mlflow_run_id"),
                 "retrain_mode": "continue",
             }
         )
@@ -685,7 +695,6 @@ def tf_idf_continue_train(
         if feature_representation == "tfidf_embed_avg":
             updated_artifacts["embedding_matrix"] = embedding_matrix.detach().cpu()
 
-        with open(save_dir / f"{save_name}_artifacts.pkl", "wb") as af:
-            pickle.dump(updated_artifacts, af)
+        _log_artifacts_to_mlflow(result["mlflow_run_id"], updated_artifacts)
 
     return result

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from collections import Counter
-from pathlib import Path
 
 import click
 import pandas as pd
@@ -109,10 +108,10 @@ def train_models(
         text_col=text_col,
     )
 
-    save_dir = Path(summary["config"]["save_dir"]).resolve()
+    run_id = summary.get("mlflow_run_id")
     best_value = summary.get("best_metric_value")
 
-    click.echo(f"Artifacts directory: {save_dir}")
+    click.echo(f"MLflow run ID: {run_id}")
     if best_value is not None:
         click.echo(f"Best tracked metric: {best_value}")
 
@@ -136,8 +135,8 @@ def infer_dataset(
 
     frame = infer(
         dataset_path=dataset,
-        energy_model_dir=energy_model,
-        damage_model_dir=damage_model,
+        energy_run_id=energy_model,
+        damage_run_id=damage_model,
         output_path=output,
         text_col=text_col,
     )
@@ -167,19 +166,19 @@ def infer_dataset(
 )
 @click.option("--architecture", "architecture", type=str, default=None)
 @click.option("--top", default=20, show_default=True, type=int)
-@click.option("--model-dir", "model_dir", type=click.Path(exists=True), default=None)
+@click.option("--run-id", "run_id", type=str, default=None)
 @click.option("--ascending", is_flag=True, default=False)
 def metrics_view(
     sort_by: str,
     model_kind: str | None,
     architecture: str | None,
     top: int,
-    model_dir: str | None,
+    run_id: str | None,
     ascending: bool,
 ) -> None:
     """Inspect leaderboard rows or dump a single run summary."""
-    if model_dir is not None:
-        details = get_model_details(model_dir)
+    if run_id is not None:
+        details = get_model_details(run_id)
         click.echo(json_dumps_pretty(details))
         return
 

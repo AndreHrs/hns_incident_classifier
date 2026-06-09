@@ -6,9 +6,9 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.19.1
+#       jupytext_version: 1.19.3
 #   kernelspec:
-#     display_name: nlp
+#     display_name: .venv
 #     language: python
 #     name: python3
 # ---
@@ -74,7 +74,7 @@ from experiment_setup.tf_idf_runner import (
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 
-def _make_tfidf_ss_objective(encoded, run_prefix):
+def _make_tfidf_ss_objective(encoded, run_prefix, energy_model):
     def objective(trial):
         lr         = trial.suggest_float("lr", 1e-4, 1e-2, log=True)
         hidden_dim = trial.suggest_categorical("hidden_dim", [64, 128, 256, 512])
@@ -101,7 +101,7 @@ def _make_tfidf_ss_objective(encoded, run_prefix):
             "epochs": epochs, "hidden_dim": hidden_dim,
             "optimizer_fn": optimizer_fn, "scheduler_fn": scheduler_fn,
             "scheduler_step_per_batch": False, "patience": 15,
-            "best_metric": "f1_macro", "save": True, "log_leaderboard": True, "verbose": False,
+            "best_metric": "f1_macro", "save": True, "mlflow_experiment": "Energy" if energy_model else "Potential Risk", "verbose": False,
             "feature_representation": "tfidf_embed_avg",
             "embedding_model_name": "adanish91/safetybert",
             "run_name": f"{run_prefix}_trial_{trial.number}",
@@ -117,7 +117,7 @@ _tfidf_ss_enc_e = tf_idf_encode(
 )
 study_tfidf_ss_energy = optuna.create_study(direction="maximize", study_name="tfidf_safe_static_energy")
 study_tfidf_ss_energy.optimize(
-    _make_tfidf_ss_objective(_tfidf_ss_enc_e, "tfidf_safe_static"),
+    _make_tfidf_ss_objective(_tfidf_ss_enc_e, "tfidf_safe_static", energy_model=True),
     n_trials=40, show_progress_bar=True,
 )
 
@@ -128,7 +128,7 @@ _tfidf_ss_enc_d = tf_idf_encode(
 )
 study_tfidf_ss_damage = optuna.create_study(direction="maximize", study_name="tfidf_safe_static_damage")
 study_tfidf_ss_damage.optimize(
-    _make_tfidf_ss_objective(_tfidf_ss_enc_d, "tfidf_safe_static"),
+    _make_tfidf_ss_objective(_tfidf_ss_enc_d, "tfidf_safe_static", energy_model=False),
     n_trials=40, show_progress_bar=True,
 )
 
@@ -190,7 +190,7 @@ def _make_bigru_static_objective(encoded, energy_model, run_prefix):
             "embedding_model_name": "adanish91/safetybert",
             "optimizer_fn": optimizer_fn, "scheduler_fn": scheduler_fn,
             "scheduler_step_per_batch": False, "patience": 12,
-            "best_metric": "f1_macro", "save": True, "log_leaderboard": True, "verbose": False,
+            "best_metric": "f1_macro", "save": True, "mlflow_experiment": "Energy" if energy_model else "Potential Risk", "verbose": False,
             "run_name": f"{run_prefix}_trial_{trial.number}",
         }
         artifact_extras = {"text_col": text_col, "lemma_config": lemma_config, "keep_numbers": False}
@@ -255,7 +255,7 @@ def _make_bigru_context_objective(encoded, energy_model, run_prefix):
             "embedding_type": "contextual",
             "optimizer_fn": optimizer_fn, "scheduler_fn": scheduler_fn,
             "scheduler_step_per_batch": False, "patience": 12,
-            "best_metric": "f1_macro", "save": True, "log_leaderboard": True, "verbose": False,
+            "best_metric": "f1_macro", "save": True, "mlflow_experiment": "Energy" if energy_model else "Potential Risk", "verbose": False,
             "run_name": f"{run_prefix}_trial_{trial.number}",
         }
         artifact_extras = {"text_col": text_col, "lemma_config": lemma_config, "keep_numbers": False}
@@ -347,7 +347,7 @@ def _make_rdt_safe_static_objective(train_df, valid_df, test_df, energy_model, r
             "num_loops": num_loops, "dropout": dropout,
             "epochs": epochs, "optimizer_fn": optimizer_fn,
             "run_name": f"{run_prefix}_trial_{trial.number}",
-            "save": True, "log_leaderboard": True, "verbose": False,
+            "save": True, "mlflow_experiment": "Energy" if energy_model else "Potential Risk", "verbose": False,
         }
         result = looped_transformer_train(
             train_dl, valid_dl, test_dl, label_enc, vocab_size,
@@ -403,7 +403,7 @@ def _make_rdt_safe_context_objective(train_df, valid_df, test_df, energy_model, 
             "num_loops": num_loops, "dropout": dropout,
             "epochs": epochs, "optimizer_fn": optimizer_fn,
             "run_name": f"{run_prefix}_trial_{trial.number}",
-            "save": True, "log_leaderboard": True, "verbose": False,
+            "save": True, "mlflow_experiment": "Energy" if energy_model else "Potential Risk", "verbose": False,
         }
         return looped_transformer_train(
             train_dl, valid_dl, test_dl, label_enc, vocab_size,

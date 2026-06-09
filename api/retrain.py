@@ -109,7 +109,7 @@ def _merge_refresh_config(bundle: dict[str, Any], train_config: dict | None) -> 
 
 
 def retrain(
-    model_dir: str,
+    run_id: str,
     train_path: str,
     valid_path: str,
     test_path: str,
@@ -117,11 +117,10 @@ def retrain(
     text_col: str | None = None,
     mode: str = "auto",
 ) -> dict[str, Any]:
-    """Retrain or fine-tune a saved model directory.
+    """Retrain or fine-tune a saved model by its MLflow run ID.
 
     Args:
-        model_dir: Existing trained model directory containing model, summary,
-            and artifact files.
+        run_id: MLflow run ID of the model to retrain.
         train_path: CSV training split.
         valid_path: CSV validation split.
         test_path: CSV test split.
@@ -135,7 +134,7 @@ def retrain(
     Returns:
         New run summary from the shared training loop.
     """
-    bundle = load_model(model_dir)
+    bundle = load_model(run_id)
     architecture = _normalise_architecture(bundle["model_type"])
     target = _infer_target(bundle)
     text_col = _default_text_col(bundle, text_col)

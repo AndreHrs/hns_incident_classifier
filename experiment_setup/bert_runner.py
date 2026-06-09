@@ -1,10 +1,21 @@
 """Experiment runner utilities for BERT transformer classification."""
 
 import pickle
-from pathlib import Path
+import tempfile
+
+import mlflow
 
 from implementations.bert_transformer import run_bert_experiment
 from modules.encoding import LabelEncoder
+
+def _log_artifacts_to_mlflow(run_id: str, artifacts: dict) -> None:
+    client = mlflow.tracking.MlflowClient()
+    with tempfile.TemporaryDirectory() as tmp:
+        pkl_path = f"{tmp}/artifacts.pkl"
+        with open(pkl_path, "wb") as f:
+            pickle.dump(artifacts, f)
+        client.log_artifact(run_id, pkl_path)
+
 
 def _label_encoder_from_class_dict(class_dict: dict) -> LabelEncoder:
     """Rebuild a fitted :class:`~modules.encoding.LabelEncoder` from saved ``class_dict``."""
@@ -19,7 +30,7 @@ def _label_encoder_from_class_dict(class_dict: dict) -> LabelEncoder:
 
 
 _BERT_DEFAULTS = {
-    "model_type": "bert-base-uncased",                 # remove from config after refactor
+    "model_type": "bert-base-uncased",
     "tokenizer_name": None,
     "run_name": "bert_run",
     "fine_tune": False,
@@ -32,6 +43,7 @@ _BERT_DEFAULTS = {
     "use_class_weights": False,
     "weight_decay": 0.01,
     "threshold": 0.8,
+    "save": True,
 }
 
 
@@ -99,11 +111,11 @@ def bert_train(
 
     if (
         result.get("best_model_state_dict") is not None
-        and result["config"].get("save")
+        and cfg.get("save")
+        and result.get("mlflow_run_id")
     ):
-        save_dir = Path(result["config"]["save_dir"])
-        save_name = result["config"]["save_name"]
         artifacts = {
+            "model_type": "bert",
             "energy_model": energy_model,
             "label_enc": _label_encoder_from_class_dict(dict(result["config"]["class_dict"])),
             "max_length": cfg["max_length"],
@@ -115,8 +127,7 @@ def bert_train(
             "batch_size": cfg["batch_size"],
             "text_col": text_col,
         }
-        with open(save_dir / f"{save_name}_artifacts.pkl", "wb") as af:
-            pickle.dump(artifacts, af)
+        _log_artifacts_to_mlflow(result["mlflow_run_id"], artifacts)
 
     return result
 
@@ -405,7 +416,7 @@ def bert_continue_train(
         use_temperature=bool(old_config.get("use_temperature", False)),
         parameters={
             "retrain_mode": "continue",
-            "base_model_dir": old_config.get("save_dir"),
+            "base_run_id": old_config.get("mlflow_run_id"),
             "model_type": old_config.get("model_type", "BERT"),
             "target_type": target_type,
             "model_name": model_name,
@@ -437,17 +448,19 @@ def bert_continue_train(
             "tokenizer_name": tokenizer_name,
             "pooling": pooling,
             "fine_tune": fine_tune,
-            "base_model_dir": old_config.get("save_dir"),
+            "base_run_id": old_config.get("mlflow_run_id"),
             "retrain_mode": "continue",
         },
     )
 
-    if result.get("best_model_state_dict") is not None and result["config"].get("save"):
-        save_dir = Path(result["config"]["save_dir"])
-        save_name = result["config"]["save_name"]
-
+    if (
+        result.get("best_model_state_dict") is not None
+        and result["config"].get("save")
+        and result.get("mlflow_run_id")
+    ):
         updated_artifacts = {
             **artifacts,
+            "model_type": "bert",
             "energy_model": energy_model,
             "label_enc": label_enc,
             "max_length": max_length,
@@ -458,11 +471,9 @@ def bert_continue_train(
             "dropout": dropout,
             "batch_size": batch_size,
             "text_col": text_col,
-            "base_model_dir": old_config.get("save_dir"),
+            "base_run_id": old_config.get("mlflow_run_id"),
             "retrain_mode": "continue",
         }
-
-        with open(save_dir / f"{save_name}_artifacts.pkl", "wb") as af:
-            pickle.dump(updated_artifacts, af)
+        _log_artifacts_to_mlflow(result["mlflow_run_id"], updated_artifacts)
 
     return result

@@ -208,16 +208,12 @@ class RunSaver:
 
         Args:
             best_epoch: The epoch number of the best model checkpoint.
-            config: Training configuration dictionary. Used for save_name, class_dict,
-                and (if plot_dir is None) save_dir as a fallback.
-            plot_dir: Directory to write plots into. If None, falls back to a
-                plot_metrics/ subdirectory inside config["save_dir"].
+            config: Training configuration dictionary. Used for save_name and class_dict.
+            plot_dir: Directory to write plots into. Required.
         """
-        if plot_dir is not None:
-            plot_dir = Path(plot_dir)
-        else:
-            save_dir = Path(config["save_dir"])
-            plot_dir = save_dir / "plot_metrics"
+        if plot_dir is None:
+            raise ValueError("plot_dir must be provided")
+        plot_dir = Path(plot_dir)
         plot_dir.mkdir(parents=True, exist_ok=True)
 
         # Extract config values frequently needed for plotting

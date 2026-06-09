@@ -245,8 +245,8 @@ def _run_bundle_on_df(df: pd.DataFrame, text_col: str, bundle: dict):
 
 def infer(
     dataset_path: str,
-    energy_model_dir: str | None = None,
-    damage_model_dir: str | None = None,
+    energy_run_id: str | None = None,
+    damage_run_id: str | None = None,
     output_path: str | None = None,
     text_col: str = "description",
 ) -> pd.DataFrame:
@@ -254,30 +254,30 @@ def infer(
 
     Args:
         dataset_path: Incident CSV compatible with preprocessing utilities.
-        energy_model_dir: Optional folder produced by ``train(..., model_type="energy")``.
-        damage_model_dir: Optional folder produced by ``train(..., model_type="damage")``.
+        energy_run_id: MLflow run ID of an energy-type model.
+        damage_run_id: MLflow run ID of a damage-potential model.
         output_path: Optional CSV sink (no row index column).
         text_col: Text column consumed by preprocessing/tokenizers.
 
     Returns:
         A copy of the input frame with appended prediction/action columns depending on
-        whether one or both model directories were supplied.
+        whether one or both run IDs were supplied.
 
     Raises:
-        ValueError: When neither optional directory path is supplied.
+        ValueError: When neither optional run ID is supplied.
     """
-    if energy_model_dir is None and damage_model_dir is None:
-        raise ValueError("At least one of energy_model_dir or damage_model_dir must be set.")
+    if energy_run_id is None and damage_run_id is None:
+        raise ValueError("At least one of energy_run_id or damage_run_id must be set.")
 
     high_thr, med_thr = _load_confidence_thresholds()
     frame = _rename_columns(pd.read_csv(dataset_path))
     enriched = frame.copy()
 
     bundles: list[tuple[str, dict]] = []
-    if energy_model_dir is not None:
-        bundles.append(("energy", load_model(energy_model_dir)))
-    if damage_model_dir is not None:
-        bundles.append(("damage", load_model(damage_model_dir)))
+    if energy_run_id is not None:
+        bundles.append(("energy", load_model(energy_run_id)))
+    if damage_run_id is not None:
+        bundles.append(("damage", load_model(damage_run_id)))
 
     for bucket, bundle in bundles:
         aligned_idx, preds, confidences = _run_bundle_on_df(enriched, text_col, bundle)

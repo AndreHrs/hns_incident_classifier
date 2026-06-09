@@ -2,10 +2,13 @@
 
 import json
 import pickle
+import tempfile
 import numpy as np
 import torch
 from pathlib import Path
 from torch.nn.utils.rnn import pad_sequence
+
+import mlflow
 
 from implementations.simple_bi_gru import BiGRUClassifier, build_bigru_dataloader
 from modules.training_loop import training
@@ -15,6 +18,16 @@ from modules.encoding.sequence_encoder import SequenceEncoder
 from modules import OneTextPreProcessor
 
 _COLUMN_MAP_PATH = Path(__file__).parent.parent / "column_map.json"
+
+
+def _log_artifacts_to_mlflow(run_id: str, artifacts: dict) -> None:
+    client = mlflow.tracking.MlflowClient()
+    with tempfile.TemporaryDirectory() as tmp:
+        pkl_path = f"{tmp}/artifacts.pkl"
+        with open(pkl_path, "wb") as f:
+            pickle.dump(artifacts, f)
+        client.log_artifact(run_id, pkl_path)
+
 
 _BIGRU_MODEL_TYPE = {
     "none": "bigru",
@@ -394,12 +407,12 @@ def bigru_train(
         artifact_extras is not None
         and result.get("best_model_state_dict") is not None
         and result["config"].get("save")
+        and result.get("mlflow_run_id")
     ):
-        save_dir = Path(result["config"]["save_dir"])
-        save_name = result["config"]["save_name"]
         embedding_dim_saved = getattr(model.word_embeddings, "embedding_dim", embedding_dim)
 
         artifacts = {
+            "model_type": "bigru",
             "vocab_enc": vocab_enc,
             "seq_enc": seq_enc,
             "max_len": max_len,
@@ -417,8 +430,7 @@ def bigru_train(
             "lemma_config": artifact_extras.get("lemma_config"),
             "keep_numbers": artifact_extras.get("keep_numbers", False),
         }
-        with open(save_dir / f"{save_name}_artifacts.pkl", "wb") as af:
-            pickle.dump(artifacts, af)
+        _log_artifacts_to_mlflow(result["mlflow_run_id"], artifacts)
 
     return result
 
@@ -606,7 +618,6 @@ def bigru_hparam_search(
             "patience": 12,
             "best_metric": "f1_macro",
             "save": True,
-            "log_leaderboard": True,
             "verbose": False,
         }
         artifact_extras = {"text_col": text_col, "lemma_config": lemma_config, "keep_numbers": keep_numbers}

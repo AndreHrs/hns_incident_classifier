@@ -42,11 +42,12 @@ def train_model_loop(
     experiment_name = (
         config.get("mlflow_experiment")
         or config.get("metadata", {}).get("target")
-        or "default"
+        or "hns_classification"
     )
     mlflow.set_experiment(experiment_name)
 
-    with mlflow.start_run(run_name=config["run_name"]):
+    with mlflow.start_run(run_name=config["run_name"]) as active_run:
+        mlflow_run_id = active_run.info.run_id
         if verbose:
             print("=" * 120)
             print(f"Training the {config['model_type']} model")
@@ -138,6 +139,7 @@ def train_model_loop(
             "best_metric_value": best_metric_value,
             "best_model_state_dict": best_model_state_dict,
             "training_time_sec": total_train_time,
+            "mlflow_run_id": mlflow_run_id,
         }
 
         if config["save"] and best_model_state_dict is not None:

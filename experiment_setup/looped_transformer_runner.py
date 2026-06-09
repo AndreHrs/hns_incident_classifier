@@ -2,8 +2,10 @@
 
 import json
 import pickle
+import tempfile
 from pathlib import Path
 
+import mlflow
 import numpy as np
 import torch
 from transformers import AutoTokenizer as _AutoTokenizer
@@ -17,6 +19,15 @@ from modules.training_loop import training
 from modules import OneTextPreProcessor
 
 _COLUMN_MAP_PATH = Path(__file__).parent.parent / "column_map.json"
+
+
+def _log_artifacts_to_mlflow(run_id: str, artifacts: dict) -> None:
+    client = mlflow.tracking.MlflowClient()
+    with tempfile.TemporaryDirectory() as tmp:
+        pkl_path = f"{tmp}/artifacts.pkl"
+        with open(pkl_path, "wb") as f:
+            pickle.dump(artifacts, f)
+        client.log_artifact(run_id, pkl_path)
 
 
 def _load_tokenizer(model_name: str):
@@ -99,7 +110,6 @@ _LOOPED_DEFAULTS = {
     "scheduler_step_per_batch": False,
     "run_name": None,
     "save": True,
-    "log_leaderboard": True,
     "verbose": True,
 }
 
@@ -193,7 +203,6 @@ def looped_transformer_train(
             - ``best_metric`` (str, default ``"f1_macro"``)
             - ``run_name`` (str | None)
             - ``save`` (bool, default ``True``)
-            - ``log_leaderboard`` (bool, default ``True``)
             - ``verbose`` (bool, default ``True``)
             - ``optimizer_fn``: ``Callable[[nn.Module], Optimizer]``
             - ``scheduler_fn``: ``Callable[[Optimizer], LRScheduler]``
@@ -243,7 +252,6 @@ def looped_transformer_train(
         scheduler_step_per_batch=cfg["scheduler_step_per_batch"],
         run_name=cfg["run_name"],
         save=cfg["save"],
-        log_leaderboard=cfg["log_leaderboard"],
         verbose=cfg["verbose"],
         device=device,
     )
@@ -253,10 +261,10 @@ def looped_transformer_train(
         and max_length is not None
         and result.get("best_model_state_dict") is not None
         and result["config"].get("save")
+        and result.get("mlflow_run_id")
     ):
-        save_dir = Path(result["config"]["save_dir"])
-        save_name = result["config"]["save_name"]
         artifacts = {
+            "model_type": "looped_transformer",
             "label_enc": label_enc,
             "max_length": max_length,
             "model_name": cfg["model_name"],
@@ -271,8 +279,7 @@ def looped_transformer_train(
             "max_seq_len": cfg["max_seq_len"],
             "text_col": text_col,
         }
-        with open(save_dir / f"{save_name}_artifacts.pkl", "wb") as af:
-            pickle.dump(artifacts, af)
+        _log_artifacts_to_mlflow(result["mlflow_run_id"], artifacts)
 
     return result
 
@@ -415,7 +422,6 @@ def looped_transformer_hparam_search(
             "optimizer_fn": optimizer_fn,
             "run_name": f"looped_hparam_trial_{trial.number}",
             "save": True,
-            "log_leaderboard": True,
             "verbose": False,
         }
         result = looped_transformer_train(
