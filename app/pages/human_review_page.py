@@ -93,9 +93,15 @@ def _confirmed_rows() -> set[int]:
     return st.session_state.setdefault("confirmed_rows", set())
 
 
+def _get_decisions() -> dict:
+    """Persistent (non-widget) store for confirmed row decisions."""
+    return st.session_state.setdefault("decisions", {})
+
+
 def _restore_state_from_df(df: pd.DataFrame) -> None:
     """Populate session state from a previously saved CSV."""
     confirmed: set[int] = set()
+    decisions = _get_decisions()
     col_prefix_pairs = []
     if _ENERGY_DECISION_COL in df.columns:
         col_prefix_pairs.append((_ENERGY_DECISION_COL, "energy"))
@@ -112,15 +118,27 @@ def _restore_state_from_df(df: pd.DataFrame) -> None:
                 continue
             confirmed.add(row_idx)
             if val.startswith("Overridden: "):
-                st.session_state[f"{prefix}_decision_{row_idx}"] = "Override"
-                st.session_state[f"{prefix}_override_{row_idx}"] = val[len("Overridden: "):]
+                decisions[(row_idx, prefix)] = {
+                    "decision": "Override",
+                    "override": val[len("Overridden: "):],
+                }
             else:
-                st.session_state[f"{prefix}_decision_{row_idx}"] = "Accept"
+                decisions[(row_idx, prefix)] = {"decision": "Accept", "override": ""}
     st.session_state["confirmed_rows"] = confirmed
 
 
 def _decision_for(row_idx: int, prefix: str) -> str:
-    """Return the saved decision string for a confirmed row and prediction type."""
+    """Return the saved decision string for a row and prediction type.
+
+    Checks the persistent decisions dict first (populated on Confirm & Next),
+    then falls back to live widget state for rows not yet confirmed.
+    """
+    saved = _get_decisions().get((row_idx, prefix))
+    if saved:
+        if saved["decision"] == "Override":
+            return f"Overridden: {saved.get('override', '')}"
+        return "Accepted"
+    # Row not yet confirmed — read directly from widget state
     decision = st.session_state.get(f"{prefix}_decision_{row_idx}")
     if not decision:
         return ""
@@ -133,17 +151,10 @@ def _decision_for(row_idx: int, prefix: str) -> str:
 def _build_export_df(review_df: pd.DataFrame) -> pd.DataFrame:
     """Attach a decision column for each prediction type present in the data."""
     result = review_df.copy()
-    confirmed = _confirmed_rows()
-    has_energy = "predicted_energy_type" in review_df.columns
-    has_damage = "predicted_damage_potential" in review_df.columns
-    if has_energy:
-        result[_ENERGY_DECISION_COL] = [
-            _decision_for(idx, "energy") if idx in confirmed else "" for idx in result.index
-        ]
-    if has_damage:
-        result[_DAMAGE_DECISION_COL] = [
-            _decision_for(idx, "damage") if idx in confirmed else "" for idx in result.index
-        ]
+    if "predicted_energy_type" in review_df.columns:
+        result[_ENERGY_DECISION_COL] = [_decision_for(idx, "energy") for idx in result.index]
+    if "predicted_damage_potential" in review_df.columns:
+        result[_DAMAGE_DECISION_COL] = [_decision_for(idx, "damage") for idx in result.index]
     return result
 
 
@@ -250,6 +261,15 @@ def _review_section(
                 _decision_widget("damage", "Damage", damage_labels)
 
     if st.button("Confirm & Next →", key=f"confirm_{section_key}", type="primary"):
+        decisions = _get_decisions()
+        for row_idx in batch_rows.index:
+            for prefix in ("energy", "damage"):
+                dec = st.session_state.get(f"{prefix}_decision_{row_idx}")
+                if dec:
+                    decisions[(row_idx, prefix)] = {
+                        "decision": dec,
+                        "override": st.session_state.get(f"{prefix}_override_{row_idx}", ""),
+                    }
         confirmed.update(batch_rows.index.tolist())
         st.session_state["confirmed_rows"] = confirmed
         st.rerun()
@@ -298,6 +318,7 @@ if input_mode == "Upload CSV":
         st.session_state["_upload_file_id"] = uploaded.file_id
         df_loaded = pd.read_csv(save_uploaded_file(uploaded))
         st.session_state["review_df"] = df_loaded
+        st.session_state["decisions"] = {}
         for key in ("batch_fatal", "batch_high", "batch_medium", "batch_low"):
             st.session_state.pop(key, None)
         resume_cols = [c for c in (_ENERGY_DECISION_COL, _DAMAGE_DECISION_COL) if c in df_loaded.columns]
@@ -318,17 +339,17 @@ else:
     def _model_select(label: str, task_filter: str) -> str | None:
         entries = list_trained_models(task_filter=task_filter)
         options = [_NONE_LABEL] + [e.label for e in entries]
-        paths = {e.label: str(e.path) for e in entries}
+        run_ids = {e.label: e.run_id for e in entries}
         sel = st.selectbox(label, options, key=f"hr_{task_filter}_model")
-        return paths.get(sel) if sel != _NONE_LABEL else None
+        return run_ids.get(sel) if sel != _NONE_LABEL else None
 
-    energy_dir = _model_select("Energy Model", "energy")
-    damage_dir = _model_select("Damage Model", "damage")
+    energy_run_id = _model_select("Energy Model", "energy")
+    damage_run_id = _model_select("Damage Model", "damage")
     inline_csv = st.file_uploader("Input CSV", type=["csv"], key="hr_inline_csv")
     text_col_inline = st.text_input("Text column", value="description", key="hr_text_col")
 
     if st.button("Run Inference for Review"):
-        if energy_dir is None and damage_dir is None:
+        if energy_run_id is None and damage_run_id is None:
             st.error("Select at least one model.")
             st.stop()
         if inline_csv is None:
@@ -340,8 +361,8 @@ else:
             try:
                 result_df = api.infer(
                     dataset_path=str(save_uploaded_file(inline_csv)),
-                    energy_model_dir=energy_dir,
-                    damage_model_dir=damage_dir,
+                    energy_run_id=energy_run_id,
+                    damage_run_id=damage_run_id,
                     text_col=text_col_inline,
                 )
             except Exception as exc:
@@ -349,6 +370,7 @@ else:
                 st.stop()
         st.session_state["review_df"] = result_df
         st.session_state["confirmed_rows"] = set()
+        st.session_state["decisions"] = {}
         st.session_state["_upload_file_id"] = None
         for key in ("batch_fatal", "batch_high", "batch_medium", "batch_low"):
             st.session_state.pop(key, None)
