@@ -2,61 +2,62 @@
 
 from __future__ import annotations
 
-import json
 import tempfile
 from pathlib import Path
 from typing import NamedTuple
 
+import pandas as pd
 import streamlit as st
 
-TRAINED_MODELS_DIR = Path(__file__).resolve().parents[1] / "trained_models"
 DATASET_DIR = Path(__file__).resolve().parents[1] / "dataset"
 
 
 class ModelEntry(NamedTuple):
-    """Lightweight descriptor for a saved model run."""
+    """Lightweight descriptor for a trained MLflow run."""
 
     label: str
-    path: Path
+    run_id: str
 
 
 def list_trained_models(task_filter: str | None = None) -> list[ModelEntry]:
-    """Scan TRAINED_MODELS_DIR and return labelled model entries.
+    """Query MLflow for all finished runs and return labelled model entries.
 
-    task_filter: "energy" or "damage" — matched against run_summary config.energy_model.
+    task_filter: "energy" or "damage" — matched against the logged energy_model param.
     """
+    import mlflow
+
+    try:
+        runs = mlflow.search_runs(
+            search_all_experiments=True,
+            filter_string="status = 'FINISHED'",
+        )
+    except Exception:
+        return []
+
+    if runs.empty:
+        return []
+
     entries: list[ModelEntry] = []
+    for _, row in runs.iterrows():
+        model_type = row.get("params.model_type") or "unknown"
+        energy_str = str(row.get("params.energy_model", "")).strip().lower()
+        is_energy = energy_str in {"true", "1", "yes"}
 
-    if not TRAINED_MODELS_DIR.exists():
-        return entries
-
-    for model_dir in sorted(TRAINED_MODELS_DIR.iterdir()):
-        if not model_dir.is_dir():
+        if task_filter == "energy" and not is_energy:
             continue
-        summaries = sorted(model_dir.glob("*_run_summary.json"))
-        if not summaries:
-            continue
-
-        try:
-            with open(summaries[0], encoding="utf-8") as f:
-                summary = json.load(f)
-        except Exception:
+        if task_filter == "damage" and is_energy:
             continue
 
-        if task_filter is not None:
-            is_energy = bool(summary.get("config", {}).get("energy_model", False))
-            if task_filter == "energy" and not is_energy:
-                continue
-            if task_filter == "damage" and is_energy:
-                continue
+        run_id = row["run_id"]
+        run_name = row.get("tags.mlflow.runName") or run_id[:8]
+        best_val_f1 = row.get("metrics.best_val_f1_macro")
 
-        timestamp = summary.get("config", {}).get("timestamp", model_dir.name)
-        model_type = summary.get("config", {}).get("model_type", "unknown")
-        metric_name = summary.get("best_metric_name", "metric")
-        metric_value = summary.get("best_metric_value", 0.0)
+        if best_val_f1 is not None and not pd.isna(best_val_f1):
+            label = f"{run_name} — {model_type} [val_f1_macro={float(best_val_f1):.4f}]"
+        else:
+            label = f"{run_name} — {model_type}"
 
-        label = f"{timestamp} — {model_type} [{metric_name}={metric_value:.4f}]"
-        entries.append(ModelEntry(label=label, path=model_dir))
+        entries.append(ModelEntry(label=label, run_id=run_id))
 
     return entries
 

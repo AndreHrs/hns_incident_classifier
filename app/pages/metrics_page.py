@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import tempfile
 from pathlib import Path
 
 import streamlit as st
@@ -36,7 +37,7 @@ _LEADERBOARD_COLS = [
     "test_f1_macro",
     "val_accuracy",
     "training_time_sec",
-    "model_path",
+    "run_id",
 ]
 
 _SORT_OPTIONS = [
@@ -75,7 +76,7 @@ try:
     present_cols = [c for c in _LEADERBOARD_COLS if c in df.columns]
     st.dataframe(df[present_cols].head(int(top_n)), use_container_width=True)
 except FileNotFoundError:
-    st.warning("No leaderboard.csv found yet. Train at least one model first.")
+    st.warning("No finished MLflow runs found. Train at least one model first.")
     df = None
 except Exception as exc:
     st.error(f"Failed to load leaderboard: {exc}")
@@ -85,28 +86,35 @@ st.subheader("Inspect a Model")
 
 entries = list_trained_models()
 model_labels = [""] + [e.label for e in entries]
-model_paths = {e.label: str(e.path) for e in entries}
+run_id_map = {e.label: e.run_id for e in entries}
 
 inspect_col_a, inspect_col_b = st.columns([2, 1])
 with inspect_col_a:
-    manual_path = st.text_input("Model directory path (paste from table or type)")
+    manual_run_id = st.text_input("Run ID (paste from table or type)")
 with inspect_col_b:
     selected_label = st.selectbox("Or pick from list", model_labels)
 
-model_dir_to_load = manual_path.strip() if manual_path.strip() else model_paths.get(selected_label, "")
+run_id_to_load = manual_run_id.strip() if manual_run_id.strip() else run_id_map.get(selected_label, "")
 
-if st.button("Load Details") and model_dir_to_load:
+if st.button("Load Details") and run_id_to_load:
     try:
-        details = api.get_model_details(model_dir_to_load)
+        details = api.get_model_details(run_id_to_load)
         st.json(details)
 
-        plots = list(Path(model_dir_to_load).glob("*_combined_metrics_plot.png")) + list(
-            Path(model_dir_to_load).glob("*_test_confusion_matrix.png")
-        )
-        if plots:
-            with st.expander("Training plots", expanded=True):
-                for plot_path in plots:
-                    st.image(str(plot_path), caption=plot_path.name, use_container_width=True)
+        import mlflow
+
+        with tempfile.TemporaryDirectory() as tmp:
+            try:
+                plots_dir = mlflow.artifacts.download_artifacts(
+                    run_id=run_id_to_load, artifact_path="plots", dst_path=tmp
+                )
+                plot_files = sorted(Path(plots_dir).glob("*.png"))
+                if plot_files:
+                    with st.expander("Training plots", expanded=True):
+                        for plot_path in plot_files:
+                            st.image(str(plot_path), caption=plot_path.name, use_container_width=True)
+            except Exception:
+                pass
     except FileNotFoundError as exc:
         st.error(str(exc))
     except Exception as exc:

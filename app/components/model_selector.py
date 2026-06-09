@@ -19,12 +19,12 @@ def model_selector_widget(
     task_filter: str | None = None,
     key: str = "model_selector",
 ) -> str | None:
-    """Render a selectbox of trained models and return the selected path or None."""
+    """Render a selectbox of trained models and return the selected run ID or None."""
     entries = list_trained_models(task_filter=task_filter)
     options = [_NONE_LABEL] + [e.label for e in entries]
-    paths = {e.label: str(e.path) for e in entries}
+    run_ids = {e.label: e.run_id for e in entries}
 
     selected = st.selectbox(label, options, key=key)
     if selected == _NONE_LABEL:
         return None
-    return paths.get(selected)
+    return run_ids.get(selected)

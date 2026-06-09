@@ -54,7 +54,6 @@ _NONE_LABEL = "— none —"
 
 
 def _optional_int(value: Any) -> int | None:
-    """Return a positive int or None."""
     try:
         parsed = int(value)
         return parsed if parsed > 0 else None
@@ -63,60 +62,30 @@ def _optional_int(value: Any) -> int | None:
 
 
 def _optional_float(value: Any) -> float | None:
-    """Return a float or None."""
     try:
-        parsed = float(value)
-        return parsed
+        return float(value)
     except (TypeError, ValueError):
         return None
 
 
-def _load_summary(model_dir: str | Path) -> dict[str, Any] | None:
-    """Load the first run-summary JSON under a saved-model directory."""
-    root = Path(model_dir)
-    summaries = sorted(root.glob("*_run_summary.json"))
-    if not summaries:
-        return None
-
+def _load_run_details(run_id: str) -> dict[str, Any] | None:
+    """Return MLflow run details dict, or None on failure."""
     try:
-        with open(summaries[0], encoding="utf-8") as f:
-            return json.load(f)
+        import api
+        return api.get_model_details(run_id)
     except Exception:
         return None
 
 
 def _sort_key(entry, sort_by: str) -> float:
-    """Sort saved models using the same summary fields as inference_page.py."""
-    summary = _load_summary(entry.path)
-    if not summary:
-        return 0.0
+    import mlflow
 
     try:
-        if sort_by in summary and not isinstance(summary[sort_by], (dict, list)):
-            value = summary.get(sort_by)
-            return float(value) if value is not None else 0.0
-
-        if sort_by.startswith("val_"):
-            metric = sort_by[4:]
-            values = (
-                summary.get("history", {})
-                .get("training", {})
-                .get("val", {})
-                .get(metric, [])
-            )
-            return max((float(v) for v in values if v is not None), default=0.0)
-
-        if sort_by.startswith("test_"):
-            metric = sort_by[5:]
-            value = summary.get("history", {}).get("test", {}).get(metric)
-            if isinstance(value, list):
-                return max((float(v) for v in value if v is not None), default=0.0)
-            return float(value) if value is not None else 0.0
-
+        metrics = mlflow.get_run(entry.run_id).data.metrics
+        mlflow_key = f"best_{sort_by}" if sort_by.startswith("val_") else sort_by
+        return float(metrics.get(mlflow_key) or 0.0)
     except Exception:
         return 0.0
-
-    return 0.0
 
 
 def _build_model_selectbox(
@@ -124,38 +93,37 @@ def _build_model_selectbox(
     task_filter: str | None,
     sort_by: str,
 ) -> tuple[str, str | None, dict[str, Any] | None]:
-    """Build a saved-model dropdown and return selected label/path/summary."""
+    """Build a run dropdown and return selected label / run_id / details."""
     entries = list_trained_models(task_filter=task_filter)
     entries.sort(key=lambda e: _sort_key(e, sort_by), reverse=True)
 
     options = [_NONE_LABEL] + [entry.label for entry in entries]
-    paths = {entry.label: str(entry.path) for entry in entries}
+    run_ids = {entry.label: entry.run_id for entry in entries}
 
     selected = st.selectbox(label, options)
     if selected == _NONE_LABEL:
         return selected, None, None
 
-    model_dir = paths[selected]
-    summary = _load_summary(model_dir)
+    run_id = run_ids[selected]
+    details = _load_run_details(run_id)
 
-    if summary:
-        metric_name = summary.get("best_metric_name", "metric")
-        metric_value = summary.get("best_metric_value", 0.0)
-        try:
-            st.caption(f"Best {metric_name}: {float(metric_value):.4f}")
-        except Exception:
-            st.caption(f"Best {metric_name}: {metric_value}")
+    if details:
+        best_metric_value = details.get("best_metric_value")
+        best_metric_name = details["config"].get("best_metric", "metric")
+        if best_metric_value is not None:
+            try:
+                st.caption(f"Best {best_metric_name}: {float(best_metric_value):.4f}")
+            except Exception:
+                st.caption(f"Best {best_metric_name}: {best_metric_value}")
 
-    return selected, model_dir, summary
+    return selected, run_id, details
 
 
-def _normalise_model_family(summary: dict[str, Any] | None) -> str | None:
-    """Infer architecture family from saved summary config."""
-    if not summary:
+def _normalise_model_family(details: dict[str, Any] | None) -> str | None:
+    if not details:
         return None
 
-    config = summary.get("config", {})
-    model_type = str(config.get("model_type", "")).strip().lower()
+    model_type = str(details["config"].get("model_type", "")).strip().lower()
 
     if model_type in {"tfidf", "tf-idf", "tf_idf"}:
         return "tf_idf"
@@ -169,33 +137,20 @@ def _normalise_model_family(summary: dict[str, Any] | None) -> str | None:
     return model_type or None
 
 
-def _default_text_col(summary: dict[str, Any] | None) -> str:
-    """Infer text column from summary config/parameters."""
-    if not summary:
+def _default_text_col(details: dict[str, Any] | None) -> str:
+    if not details:
         return "description"
-
-    config = summary.get("config", {})
-    parameters = config.get("parameters", {})
-
-    return (
-        config.get("text_col")
-        or parameters.get("text_col")
-        or "description"
-    )
+    return details["config"].get("text_col") or "description"
 
 
-def _default_run_name(summary: dict[str, Any] | None) -> str:
-    """Generate a sensible retrain run name from the old model summary."""
-    if not summary:
+def _default_run_name(details: dict[str, Any] | None) -> str:
+    if not details:
         return ""
-
-    config = summary.get("config", {})
-    base_name = config.get("run_name") or config.get("save_name") or "model"
-    return f"{base_name}_retrain"
+    base = details.get("run_name") or details["config"].get("run_name") or "model"
+    return f"{base}_retrain"
 
 
 def _safe_for_json(value: Any, *, _depth: int = 0) -> Any:
-    """Convert common training-result objects into Streamlit JSON-safe values."""
     if _depth > 8:
         return repr(value)
 
@@ -238,21 +193,20 @@ def _safe_for_json(value: Any, *, _depth: int = 0) -> Any:
     return repr(value)
 
 
-def _show_selected_model_details(summary: dict[str, Any] | None, model_dir: str) -> None:
-    """Render compact metadata for the selected base model."""
-    if not summary:
-        st.warning("No readable run summary was found for this model directory.")
-        st.code(model_dir)
+def _show_selected_model_details(details: dict[str, Any] | None, run_id: str) -> None:
+    if not details:
+        st.warning("Could not load run details from MLflow.")
+        st.code(run_id)
         return
 
-    config = summary.get("config", {})
-    history = summary.get("history", {})
-    test_metrics = history.get("test", {})
+    config = details.get("config", {})
+    metrics = details.get("metrics", {})
 
     model_type = config.get("model_type", "unknown")
-    task = "Energy Type" if bool(config.get("energy_model", False)) else "Damage Potential"
-    best_metric_name = summary.get("best_metric_name", "metric")
-    best_metric_value = summary.get("best_metric_value", "—")
+    energy_str = str(config.get("energy_model", "")).strip().lower()
+    task = "Energy Type" if energy_str in {"true", "1", "yes"} else "Damage Potential"
+    best_metric_name = config.get("best_metric", "metric")
+    best_metric_value = details.get("best_metric_value")
 
     cols = st.columns(4)
     with cols[0]:
@@ -265,19 +219,16 @@ def _show_selected_model_details(summary: dict[str, Any] | None, model_dir: str)
         except Exception:
             st.metric(f"Best {best_metric_name}", str(best_metric_value))
     with cols[3]:
-        test_f1 = test_metrics.get("f1_macro", ["—"])
-        if isinstance(test_f1, list):
-            test_f1 = test_f1[-1] if test_f1 else "—"
+        test_f1 = metrics.get("test_f1_macro")
         try:
             st.metric("Test F1 macro", f"{float(test_f1):.4f}")
         except Exception:
-            st.metric("Test F1 macro", str(test_f1))
+            st.metric("Test F1 macro", "—")
 
-    st.caption(f"Base model directory: `{model_dir}`")
+    st.caption(f"MLflow run ID: `{run_id}`")
 
 
 def _resolve_dataset_paths(use_upload: bool):
-    """Render dataset controls and return path/upload objects."""
     if use_upload:
         train_file = st.file_uploader("Train CSV", type=["csv"], key="retrain_train_upload")
         valid_file = st.file_uploader("Validation CSV", type=["csv"], key="retrain_valid_upload")
@@ -292,9 +243,9 @@ def _resolve_dataset_paths(use_upload: bool):
 
 st.title("Retraining")
 st.info(
-    "**Retraining** — Select an existing saved model, provide updated train/validation/test "
+    "**Retraining** — Select an existing MLflow run, provide updated train/validation/test "
     "CSV splits, choose whether to continue from compatible artifacts or refresh the artifact "
-    "pipeline, then launch a new versioned run. The original model directory is not overwritten.",
+    "pipeline, then launch a new versioned run.",
     icon="ℹ️",
 )
 
@@ -307,30 +258,30 @@ with selection_cols[1]:
     sort_by = st.selectbox("Sort models by", _SORT_OPTIONS)
 
 task_filter = _TASK_FILTERS[task_display]
-_, selected_model_dir, selected_summary = _build_model_selectbox(
+_, selected_run_id, selected_details = _build_model_selectbox(
     "Saved model",
     task_filter=task_filter,
     sort_by=sort_by,
 )
 
-with st.expander("Manual model directory override"):
-    manual_model_dir = st.text_input(
-        "Model directory",
+with st.expander("Manual run ID override"):
+    manual_run_id = st.text_input(
+        "MLflow run ID",
         value="",
-        placeholder="trained_models/20260516_120000_model_run",
-        help="Optional. Use this when the model is not shown in the dropdown.",
+        placeholder="e.g. 3a1b2c4d5e6f7890abcdef1234567890",
+        help="Optional. Use this when the run is not shown in the dropdown.",
     )
 
-if manual_model_dir.strip():
-    selected_model_dir = manual_model_dir.strip()
-    selected_summary = _load_summary(selected_model_dir)
+if manual_run_id.strip():
+    selected_run_id = manual_run_id.strip()
+    selected_details = _load_run_details(selected_run_id)
 
-if selected_model_dir:
-    _show_selected_model_details(selected_summary, selected_model_dir)
+if selected_run_id:
+    _show_selected_model_details(selected_details, selected_run_id)
 else:
-    st.warning("Select a saved model or enter a manual model directory.")
+    st.warning("Select a saved model or enter a manual run ID.")
 
-model_family = _normalise_model_family(selected_summary)
+model_family = _normalise_model_family(selected_details)
 
 st.subheader("Retraining data")
 
@@ -339,7 +290,7 @@ train_file, valid_file, test_file, train_path_str, valid_path_str, test_path_str
     _resolve_dataset_paths(use_upload)
 )
 
-text_col = st.text_input("Text column", value=_default_text_col(selected_summary))
+text_col = st.text_input("Text column", value=_default_text_col(selected_details))
 
 st.subheader("Retraining setup")
 
@@ -354,17 +305,11 @@ mode_display = st.radio(
 )
 mode = _RETRAIN_MODES[mode_display]
 
-run_name_default = _default_run_name(selected_summary)
+run_name_default = _default_run_name(selected_details)
 run_name = st.text_input(
     "Run name",
     value=run_name_default,
     help="Leave blank to let the retrain API choose a name.",
-)
-
-parent_dir = st.text_input(
-    "Output parent directory",
-    value="trained_models",
-    help="New retrained model versions are saved under this parent directory.",
 )
 
 st.subheader("Hyperparameters")
@@ -387,7 +332,7 @@ with hp_cols[3]:
 
 advanced_open = model_family in {"tf_idf", "bert", "bigru", "looped_transformer"}
 with st.expander("Advanced retraining options", expanded=advanced_open):
-    metric_cols = st.columns(3)
+    metric_cols = st.columns(2)
     with metric_cols[0]:
         best_metric = st.selectbox("best_metric", ["default"] + _BEST_METRICS)
     with metric_cols[1]:
@@ -399,8 +344,6 @@ with st.expander("Advanced retraining options", expanded=advanced_open):
             placeholder="default",
             format="%.4f",
         )
-    with metric_cols[2]:
-        log_leaderboard = st.checkbox("log_leaderboard", value=True)
 
     hidden_dim = None
     feature_representation = None
@@ -475,8 +418,8 @@ with st.expander("Advanced retraining options", expanded=advanced_open):
 if st.button("Retrain Model", type="primary"):
     errors: list[str] = []
 
-    if not selected_model_dir:
-        errors.append("Select a base model or enter a manual model directory.")
+    if not selected_run_id:
+        errors.append("Select a base model or enter a manual run ID.")
 
     if use_upload:
         if train_file is None:
@@ -527,14 +470,10 @@ if st.button("Retrain Model", type="primary"):
         cfg["learning_rate"] = float(learning_rate)
     if run_name.strip():
         cfg["run_name"] = run_name.strip()
-    if parent_dir.strip():
-        cfg["parent_dir"] = parent_dir.strip()
     if best_metric != "default":
         cfg["best_metric"] = best_metric
     if _optional_float(threshold) is not None:
         cfg["threshold"] = float(threshold)
-
-    cfg["log_leaderboard"] = bool(log_leaderboard)
 
     if hidden_dim is not None and _optional_int(hidden_dim):
         cfg["hidden_dim"] = int(hidden_dim)
@@ -564,7 +503,7 @@ if st.button("Retrain Model", type="primary"):
     with st.spinner("Retraining in progress…"):
         try:
             result = retrain(
-                model_dir=str(selected_model_dir),
+                run_id=selected_run_id,
                 train_path=train_path,
                 valid_path=valid_path,
                 test_path=test_path,
@@ -576,17 +515,16 @@ if st.button("Retrain Model", type="primary"):
             st.error(f"Retraining failed: {exc}")
             st.stop()
 
-    result_config = result.get("config", {})
-    save_dir = result_config.get("save_dir", "—")
+    new_run_id = result.get("mlflow_run_id", "—")
     metric_name = result.get("best_metric_name", "metric")
     metric_value = result.get("best_metric_value", 0.0)
 
     st.success(
         f"Retraining complete!\n\n"
-        f"**Saved to:** `{save_dir}`\n\n"
+        f"**MLflow run ID:** `{new_run_id}`\n\n"
         f"**Best {metric_name}:** {float(metric_value):.4f}"
         if isinstance(metric_value, (int, float))
-        else f"Retraining complete!\n\n**Saved to:** `{save_dir}`\n\n**Best {metric_name}:** {metric_value}"
+        else f"Retraining complete!\n\n**MLflow run ID:** `{new_run_id}`\n\n**Best {metric_name}:** {metric_value}"
     )
 
     test_metrics = result.get("history", {}).get("test", {})

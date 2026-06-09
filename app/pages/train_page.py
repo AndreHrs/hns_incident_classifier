@@ -161,13 +161,13 @@ if st.button("Train Model", type="primary"):
             st.error(f"Training failed: {exc}")
             st.stop()
 
-    save_dir = result.get("config", {}).get("save_dir", "—")
+    run_id = result.get("mlflow_run_id", "—")
     metric_name = result.get("best_metric_name", "metric")
     metric_value = result.get("best_metric_value", 0.0)
 
     st.success(
         f"Training complete!\n\n"
-        f"**Saved to:** `{save_dir}`\n\n"
+        f"**MLflow run ID:** `{run_id}`\n\n"
         f"**Best {metric_name}:** {metric_value:.4f}"
     )
 

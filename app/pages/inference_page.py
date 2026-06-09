@@ -16,61 +16,41 @@ _SORT_OPTIONS = ["val_f1_macro", "test_f1_macro", "val_accuracy", "training_time
 _NONE_LABEL = "— none —"
 
 
+def _sort_key(entry, sort_by: str) -> float:
+    import mlflow
+
+    try:
+        metrics = mlflow.get_run(entry.run_id).data.metrics
+        mlflow_key = f"best_{sort_by}" if sort_by.startswith("val_") else sort_by
+        return float(metrics.get(mlflow_key) or 0.0)
+    except Exception:
+        return 0.0
+
+
 def _build_model_selectbox(label: str, task_filter: str, sort_by: str) -> tuple[str, str | None]:
     entries = list_trained_models(task_filter=task_filter)
     entries.sort(key=lambda e: _sort_key(e, sort_by), reverse=True)
     options = [_NONE_LABEL] + [e.label for e in entries]
-    paths = {e.label: str(e.path) for e in entries}
+    run_ids = {e.label: e.run_id for e in entries}
 
     selected = st.selectbox(label, options)
     if selected == _NONE_LABEL:
         return _NONE_LABEL, None
 
-    path = paths[selected]
-    import json
+    run_id = run_ids[selected]
 
-    summaries = sorted(Path(path).glob("*_run_summary.json"))
-    if summaries:
-        with open(summaries[0], encoding="utf-8") as f:
-            s = json.load(f)
-        metric_name = s.get("best_metric_name", "metric")
-        metric_value = s.get("best_metric_value", 0.0)
-        st.caption(f"Best {metric_name}: {metric_value:.4f}")
+    import mlflow
 
-    return selected, path
-
-
-def _sort_key(entry, sort_by: str):
-    import json
-
-    summaries = sorted(entry.path.glob("*_run_summary.json"))
-    if not summaries:
-        return 0.0
     try:
-        with open(summaries[0], encoding="utf-8") as f:
-            s = json.load(f)
-
-        # Top-level scalars (e.g. training_time_sec)
-        if sort_by in s and not isinstance(s[sort_by], (dict, list)):
-            return float(s[sort_by]) if s[sort_by] is not None else 0.0
-
-        # val_X → history.training.val.X (best value across epochs)
-        if sort_by.startswith("val_"):
-            metric = sort_by[4:]
-            vals = s.get("history", {}).get("training", {}).get("val", {}).get(metric, [])
-            return max((float(v) for v in vals if v is not None), default=0.0)
-
-        # test_X → history.test.X (scalar or single-element list)
-        if sort_by.startswith("test_"):
-            metric = sort_by[5:]
-            val = s.get("history", {}).get("test", {}).get(metric)
-            if isinstance(val, list):
-                return max((float(v) for v in val if v is not None), default=0.0)
-            return float(val) if val is not None else 0.0
-
-        return 0.0
+        run = mlflow.get_run(run_id)
+        best_metric_value = run.data.metrics.get("best_metric_value")
+        best_metric_name = run.data.params.get("best_metric", "metric")
+        if best_metric_value is not None:
+            st.caption(f"Best {best_metric_name}: {float(best_metric_value):.4f}")
     except Exception:
-        return 0.0
+        pass
+
+    return selected, run_id
 
 
 st.title("Inference")
@@ -79,10 +59,10 @@ show_instruction_banner("inference")
 sort_by = st.selectbox("Sort models by", _SORT_OPTIONS)
 
 st.subheader("Energy Model (optional)")
-_, energy_model_dir = _build_model_selectbox("Energy model", "energy", sort_by)
+_, energy_run_id = _build_model_selectbox("Energy model", "energy", sort_by)
 
 st.subheader("Damage Model (optional)")
-_, damage_model_dir = _build_model_selectbox("Damage model", "damage", sort_by)
+_, damage_run_id = _build_model_selectbox("Damage model", "damage", sort_by)
 
 st.subheader("Dataset")
 input_csv = st.file_uploader("Input CSV", type=["csv"])
@@ -90,7 +70,7 @@ output_path = st.text_input("Output file path", value="/tmp/inference_output.csv
 text_col = st.text_input("Text column", value="description")
 
 if st.button("Run Inference", type="primary"):
-    if energy_model_dir is None and damage_model_dir is None:
+    if energy_run_id is None and damage_run_id is None:
         st.error("Select at least one model (energy or damage).")
         st.stop()
     if input_csv is None:
@@ -105,8 +85,8 @@ if st.button("Run Inference", type="primary"):
         try:
             df = api.infer(
                 dataset_path=dataset_path,
-                energy_model_dir=energy_model_dir,
-                damage_model_dir=damage_model_dir,
+                energy_run_id=energy_run_id,
+                damage_run_id=damage_run_id,
                 output_path=output_path,
                 text_col=text_col,
             )
@@ -127,7 +107,7 @@ if st.button("Run Inference", type="primary"):
                     st.metric(f"{model_label} {tier}", count)
                 col_idx += 1
 
-    if "fatal_flag" in df.columns and damage_model_dir is not None:
+    if "fatal_flag" in df.columns and damage_run_id is not None:
         fatal_count = int((df["fatal_flag"] == "YES").sum())
         st.markdown(
             f"<span style='color:red;font-weight:bold'>Fatal-flagged: {fatal_count}</span>",
