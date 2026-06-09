@@ -17,14 +17,18 @@ Requires **conda** and **Python 3.12 or higher**.
     - [Linux / macOS](#linux--macos-1)
     - [Windows](#windows-1)
     - [Manual](#manual-1)
-  - [CLI Usage](#cli-usage)
-    - [`train` — Fine-tune a model](#train--fine-tune-a-model)
-    - [`infer` — Batch inference](#infer--batch-inference)
-    - [`metrics` — Inspect the leaderboard](#metrics--inspect-the-leaderboard)
-  - [Building Code Documentation](#building-code-documentation)
+  - [Running the MLflow Server](#running-the-mlflow-server)
     - [Linux / macOS](#linux--macos-2)
     - [Windows](#windows-2)
     - [Manual](#manual-2)
+  - [CLI Usage](#cli-usage)
+    - [`train` — Fine-tune a model](#train--fine-tune-a-model)
+    - [`infer` — Batch inference](#infer--batch-inference)
+    - [`metrics` — Inspect MLflow runs](#metrics--inspect-mlflow-runs)
+  - [Building Code Documentation](#building-code-documentation)
+    - [Linux / macOS](#linux--macos-3)
+    - [Windows](#windows-3)
+    - [Manual](#manual-3)
 - [Developer / Maintainer Guide](#developer--maintainer-guide)
   - [Code Style](#code-style)
   - [Naming Conventions](#naming-conventions)
@@ -131,6 +135,34 @@ streamlit run app/app.py
 
 ---
 
+## Running the MLflow Server
+
+Training runs, metrics, and artifacts are tracked with MLflow. Start the MLflow UI to browse experiments, compare runs, and inspect saved models.
+
+#### Linux / macOS
+
+```bash
+./run_mlflow.sh
+```
+
+#### Windows
+
+> AI-converted from the tested `.sh` script and has **not** been tested. Use with caution.
+
+```bat
+run_mlflow.bat
+```
+
+#### Manual
+
+```bash
+mlflow server --host 127.0.0.1 --port 8080
+```
+
+Then open <http://127.0.0.1:8080> in your browser.
+
+---
+
 ## CLI Usage
 
 ```
@@ -197,7 +229,9 @@ python cli.py infer \
 
 At least one of `--energy-model` or `--damage-model` must be supplied. The output CSV includes confidence tiers and action columns. Prints row counts and tier distributions.
 
-### `metrics` — Inspect the leaderboard
+### `metrics` — Inspect MLflow runs
+
+Runs and their metrics are stored in MLflow. You can browse them in the MLflow UI (see [Running the MLflow Server](#running-the-mlflow-server)) or query them from the CLI:
 
 ```bash
 # Show top 20 runs sorted by val_f1_macro
@@ -207,7 +241,7 @@ python cli.py metrics
 python cli.py metrics --model-type energy --architecture bert --sort-by test_f1_macro --top 10
 
 # Dump a single run's full details (WARNING: BIG FILE)
-python cli.py metrics --model-dir path/to/run
+python cli.py metrics --run-id <mlflow-run-id>
 ```
 
 **Optional flags:**
@@ -219,7 +253,7 @@ python cli.py metrics --model-dir path/to/run
 | `--model-type` | Filter by `energy` or `damage` |
 | `--architecture` | Filter by architecture name |
 | `--top N` | Number of rows to show (default: `20`) |
-| `--model-dir PATH` | Dump JSON details for a single saved run |
+| `--run-id ID` | Dump full details for a single MLflow run |
 
 Renders a rich table if the `rich` package is installed, otherwise falls back to plain text.
 
@@ -247,6 +281,7 @@ build_docs.bat
 cd docs
 make html
 ```
+
 
 Output is written to `docs/build/html/index.html`.
 
