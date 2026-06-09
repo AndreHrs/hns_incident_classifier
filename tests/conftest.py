@@ -93,7 +93,7 @@ def _train(raw_csv, model_type: str, architecture: str, extra_cfg: dict | None =
         architecture=architecture,
         train_config=cfg,
     )
-    return result, result["config"]["save_dir"]
+    return result, result["mlflow_run_id"]
 
 
 @pytest.fixture(scope="session")

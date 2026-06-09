@@ -53,7 +53,7 @@ class TestCLITrain:
             "--architecture", "tf_idf",
             "--epochs", "2",
         ])
-        assert "Artifacts directory:" in result.output
+        assert "MLflow run ID:" in result.output
 
     def test_tfidf_damage_exits_zero(self, runner, raw_csv):
         result = runner.invoke(cli, [
@@ -146,32 +146,32 @@ class TestCLITrain:
 
 class TestCLIInfer:
     def test_energy_only_exits_zero(self, runner, raw_csv, tfidf_energy_model, tmp_path):
-        _, model_dir = tfidf_energy_model
+        _, run_id = tfidf_energy_model
         out = tmp_path / "preds.csv"
         result = runner.invoke(cli, [
             "infer",
             "--dataset", str(raw_csv["test"]),
-            "--energy-model", model_dir,
+            "--energy-model", run_id,
             "--output", str(out),
         ])
         assert result.exit_code == 0, result.output
 
     def test_energy_only_prints_rows_scored(self, runner, raw_csv, tfidf_energy_model, tmp_path):
-        _, model_dir = tfidf_energy_model
+        _, run_id = tfidf_energy_model
         result = runner.invoke(cli, [
             "infer",
             "--dataset", str(raw_csv["test"]),
-            "--energy-model", model_dir,
+            "--energy-model", run_id,
             "--output", str(tmp_path / "preds.csv"),
         ])
         assert "Rows scored:" in result.output
 
     def test_energy_only_prints_tier_counts(self, runner, raw_csv, tfidf_energy_model, tmp_path):
-        _, model_dir = tfidf_energy_model
+        _, run_id = tfidf_energy_model
         result = runner.invoke(cli, [
             "infer",
             "--dataset", str(raw_csv["test"]),
-            "--energy-model", model_dir,
+            "--energy-model", run_id,
             "--output", str(tmp_path / "preds.csv"),
         ])
         assert "Energy tier counts:" in result.output
@@ -179,13 +179,13 @@ class TestCLIInfer:
     def test_both_models_prints_fatal_flagged(
         self, runner, raw_csv, tfidf_energy_model, tfidf_damage_model, tmp_path
     ):
-        _, energy_dir = tfidf_energy_model
-        _, damage_dir = tfidf_damage_model
+        _, energy_run = tfidf_energy_model
+        _, damage_run = tfidf_damage_model
         result = runner.invoke(cli, [
             "infer",
             "--dataset", str(raw_csv["test"]),
-            "--energy-model", energy_dir,
-            "--damage-model", damage_dir,
+            "--energy-model", energy_run,
+            "--damage-model", damage_run,
             "--output", str(tmp_path / "both.csv"),
         ])
         assert result.exit_code == 0, result.output
@@ -200,12 +200,12 @@ class TestCLIInfer:
         assert result.exit_code != 0
 
     def test_output_csv_created(self, runner, raw_csv, tfidf_energy_model, tmp_path):
-        _, model_dir = tfidf_energy_model
+        _, run_id = tfidf_energy_model
         out = tmp_path / "preds.csv"
         runner.invoke(cli, [
             "infer",
             "--dataset", str(raw_csv["test"]),
-            "--energy-model", model_dir,
+            "--energy-model", run_id,
             "--output", str(out),
         ])
         assert out.exists()
@@ -213,44 +213,44 @@ class TestCLIInfer:
     def test_damage_only_prints_damage_tier_counts(
         self, runner, raw_csv, tfidf_damage_model, tmp_path
     ):
-        _, model_dir = tfidf_damage_model
+        _, run_id = tfidf_damage_model
         result = runner.invoke(cli, [
             "infer",
             "--dataset", str(raw_csv["test"]),
-            "--damage-model", model_dir,
+            "--damage-model", run_id,
             "--output", str(tmp_path / "dmg.csv"),
         ])
         assert "Damage tier counts:" in result.output
 
     @pytest.mark.slow
     def test_bigru_infer_exits_zero(self, runner, raw_csv, bigru_energy_model, tmp_path):
-        _, model_dir = bigru_energy_model
+        _, run_id = bigru_energy_model
         result = runner.invoke(cli, [
             "infer",
             "--dataset", str(raw_csv["test"]),
-            "--energy-model", model_dir,
+            "--energy-model", run_id,
             "--output", str(tmp_path / "bigru.csv"),
         ])
         assert result.exit_code == 0, result.output
 
     @pytest.mark.slow
     def test_bert_infer_exits_zero(self, runner, raw_csv, bert_energy_model, tmp_path):
-        _, model_dir = bert_energy_model
+        _, run_id = bert_energy_model
         result = runner.invoke(cli, [
             "infer",
             "--dataset", str(raw_csv["test"]),
-            "--energy-model", model_dir,
+            "--energy-model", run_id,
             "--output", str(tmp_path / "bert.csv"),
         ])
         assert result.exit_code == 0, result.output
 
     @pytest.mark.slow
     def test_looped_infer_exits_zero(self, runner, raw_csv, looped_energy_model, tmp_path):
-        _, model_dir = looped_energy_model
+        _, run_id = looped_energy_model
         result = runner.invoke(cli, [
             "infer",
             "--dataset", str(raw_csv["test"]),
-            "--energy-model", model_dir,
+            "--energy-model", run_id,
             "--output", str(tmp_path / "looped.csv"),
         ])
         assert result.exit_code == 0, result.output
@@ -277,14 +277,14 @@ class TestCLIMetrics:
         result = runner.invoke(cli, ["metrics", "--architecture", "tf_idf", "--top", "5"])
         assert result.exit_code == 0, result.output
 
-    def test_model_dir_flag_prints_json(self, runner, tfidf_energy_model):
-        _, model_dir = tfidf_energy_model
-        result = runner.invoke(cli, ["metrics", "--model-dir", model_dir])
+    def test_run_id_flag_prints_json(self, runner, tfidf_energy_model):
+        _, run_id = tfidf_energy_model
+        result = runner.invoke(cli, ["metrics", "--run-id", run_id])
         assert result.exit_code == 0, result.output
         parsed = json.loads(result.output)
         assert "config" in parsed
 
-    def test_model_dir_has_best_metric_in_output(self, runner, tfidf_energy_model):
-        _, model_dir = tfidf_energy_model
-        result = runner.invoke(cli, ["metrics", "--model-dir", model_dir])
+    def test_run_id_has_best_metric_in_output(self, runner, tfidf_energy_model):
+        _, run_id = tfidf_energy_model
+        result = runner.invoke(cli, ["metrics", "--run-id", run_id])
         assert "best_metric_value" in result.output
