@@ -21,7 +21,6 @@ NLP pipeline for classifying incident reports into energy and damage categories.
    modules/models
    modules/training_loop
    modules/optimisation
-   modules/leaderboard
    modules/inference
 
 .. toctree::
