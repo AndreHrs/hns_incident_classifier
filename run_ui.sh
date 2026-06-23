@@ -32,6 +32,10 @@ else
     source .venv/bin/activate
 fi
 
+if [ -f .env ]; then
+    set -a; source .env; set +a
+fi
+
 echo "[Run] Starting Streamlit app..."
 echo ""
 streamlit run app/app.py

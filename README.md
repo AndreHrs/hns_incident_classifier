@@ -143,7 +143,16 @@ streamlit run app/app.py
 
 ## Running the MLflow Server
 
-Training runs, metrics, and artifacts are tracked with MLflow. Start the MLflow UI to browse experiments, compare runs, and inspect saved models.
+Training runs, metrics, and artifacts are tracked with MLflow. The tracking server URL is read from the `MLFLOW_TRACKING_URI` environment variable, which you can set in a `.env` file at the project root:
+
+```bash
+cp .env.example .env
+# then edit .env to point at your server
+```
+
+If you are using an **external MLflow instance** (e.g. a Docker container), just set `MLFLOW_TRACKING_URI` in `.env` and skip starting a local server entirely.
+
+If you need a **local server**, the scripts below start one at `http://127.0.0.1:8080` (the default in `.env.example`):
 
 #### Linux / macOS
 

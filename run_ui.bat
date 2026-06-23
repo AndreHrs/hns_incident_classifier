@@ -35,6 +35,10 @@ if "!ENV_TYPE!"=="conda" (
     call .venv\Scripts\activate.bat
 )
 
+if exist .env (
+    for /f "usebackq tokens=*" %%i in (".env") do set %%i
+)
+
 echo [Run] Starting Streamlit app...
 echo.
 streamlit run app/app.py

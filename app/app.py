@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import os
 import tempfile
 from pathlib import Path
 from typing import NamedTuple
 
+import mlflow
 import pandas as pd
 import streamlit as st
+from dotenv import load_dotenv
+
+load_dotenv()
+mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:8080"))
 
 DATASET_DIR = Path(__file__).resolve().parents[1] / "dataset"
 

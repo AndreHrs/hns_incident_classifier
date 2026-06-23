@@ -1,12 +1,17 @@
 """Main training loop with early stopping and MLflow artifact logging."""
 
 import copy
+import os
 import tempfile
 import time
 
 import mlflow
 import mlflow.pytorch
 import torch
+from dotenv import load_dotenv
+
+load_dotenv()
+mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:8080"))
 
 from .one_epoch import train_one_epoch
 from .validation import validate
