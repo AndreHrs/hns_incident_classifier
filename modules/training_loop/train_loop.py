@@ -213,7 +213,11 @@ def train_model_loop(
             mlflow.log_metrics(summary_metrics)
 
             # --- Model and plots ---
-            mlflow.pytorch.log_model(config["model"], "model")
+            mlflow.pytorch.log_model(
+                config["model"],
+                "model",
+                serialization_format=mlflow.pytorch.SERIALIZATION_FORMAT_PICKLE,
+            )
 
             with tempfile.TemporaryDirectory() as tmp_dir:
                 run_saver.plot_history(best_epoch, config, plot_dir=tmp_dir)

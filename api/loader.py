@@ -40,8 +40,8 @@ def load_model(run_id: str) -> dict[str, Any]:
         with open(local_path, "rb") as f:
             artifacts: dict[str, Any] = pickle.load(f)
 
-    model = mlflow.pytorch.load_model(f"runs:/{run_id}/model")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = mlflow.pytorch.load_model(f"runs:/{run_id}/model", map_location=device)
     model.to(device).eval()
 
     model_type = str(artifacts.get("model_type", run.data.params.get("model_type", ""))).strip()
