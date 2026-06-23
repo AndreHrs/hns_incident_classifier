@@ -36,6 +36,14 @@ if [ -f .env ]; then
     set -a; source .env; set +a
 fi
 
+HEADLESS=""
+for arg in "$@"; do
+    case $arg in
+        --headless) HEADLESS="--server.headless true --server.port 8501" ;;
+    esac
+done
+
 echo "[Run] Starting Streamlit app..."
 echo ""
-streamlit run app/app.py
+# shellcheck disable=SC2086
+streamlit run app/app.py $HEADLESS
