@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
 
 import streamlit as st
+
+DEMO_MODE = os.environ.get("DEMO_MODE", "true").lower() == "true"
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -285,7 +288,10 @@ model_family = _normalise_model_family(selected_details)
 
 st.subheader("Retraining data")
 
-use_upload = st.toggle("Upload files", value=True)
+if DEMO_MODE:
+    use_upload = True
+else:
+    use_upload = st.toggle("Upload files", value=True)
 train_file, valid_file, test_file, train_path_str, valid_path_str, test_path_str = (
     _resolve_dataset_paths(use_upload)
 )

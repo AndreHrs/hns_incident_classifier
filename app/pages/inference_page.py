@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
 import streamlit as st
+
+DEMO_MODE = os.environ.get("DEMO_MODE", "true").lower() == "true"
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -66,7 +69,10 @@ _, damage_run_id = _build_model_selectbox("Damage model", "damage", sort_by)
 
 st.subheader("Dataset")
 input_csv = st.file_uploader("Input CSV", type=["csv"])
-output_path = st.text_input("Output file path", value="/tmp/inference_output.csv")
+if DEMO_MODE:
+    output_path = None
+else:
+    output_path = st.text_input("Output file path", value="/tmp/inference_output.csv")
 text_col = st.text_input("Text column", value="description")
 
 if st.button("Run Inference", type="primary"):
@@ -94,7 +100,10 @@ if st.button("Run Inference", type="primary"):
             st.error(f"Inference failed: {exc}")
             st.stop()
 
-    st.success(f"Scored {len(df)} rows. Saved to {output_path}")
+    msg = f"Scored {len(df)} rows."
+    if output_path:
+        msg += f" Saved to {output_path}"
+    st.success(msg)
 
     metric_cols = st.columns(4)
     col_idx = 0

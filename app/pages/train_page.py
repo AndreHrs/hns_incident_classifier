@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
 import streamlit as st
+
+DEMO_MODE = os.environ.get("DEMO_MODE", "true").lower() == "true"
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -45,7 +48,10 @@ with col_arch:
 arch_key = _ARCH_MAP[arch_display]
 
 st.subheader("Dataset")
-use_upload = st.toggle("Upload files", value=True)
+if DEMO_MODE:
+    use_upload = True
+else:
+    use_upload = st.toggle("Upload files", value=True)
 
 if use_upload:
     train_file = st.file_uploader("Train CSV", type=["csv"], key="train_upload")
